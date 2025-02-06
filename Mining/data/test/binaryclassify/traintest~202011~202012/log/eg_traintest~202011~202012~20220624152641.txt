@@ -1,0 +1,197 @@
+
+                   ###################################################################### 加工训练账期近n月基础数据
+                    
+20220624-15:26:41  开始时间：2022-06-24 15:26:41
+20220624-15:26:41  ---- month: 202011
+20220624-15:26:41  ---- 参数设置：
+                       ---- step: train
+                       ---- Info.model_name: 模型示例
+                       ---- Info.n_recent: 3
+                       ---- Info.Pcase_limit: 1000
+                       ---- Info.traintable_ratio: 2
+                       ---- Info.Pcumsum_limit: 2
+                       ---- Info.timein_count: 500
+
+                   ------------------------------------- 检查各前置表 --------------------------------------------------- 
+20220624-15:26:41  检查 kehujingyingbudb.ml_xy_eg_m
+20220624-15:26:41      78 列
+20220624-15:26:41      202011账期： 10000行
+20220624-15:26:41      202010账期： 15000行
+20220624-15:26:41      202009账期： 18000行
+
+
+20220624-15:26:41  正负例分布：select cast(flag_eg as text) flag_eg, count(1) from kehujingyingbudb.ml_xy_eg_m  group by flag_eg
+20220624-15:26:41      dis_train_total: {'count': 68000, 'Pcount': 8036, 'prop': 0.118}
+
+
+
+20220624-15:26:41  ---- 建表语句（限定202011账期当月目标用户）：
+                       drop table if exists kehujingyingbudb.mid_eg_model_train_202011;
+                       select pg_sleep(5);
+                       create  table kehujingyingbudb.mid_eg_model_train_202011 as 
+                       select acct_month, user_id, flag_eg ,row_number() over(order by acct_month desc, random()) rnself 
+                       from kehujingyingbudb.ml_xy_eg_m
+                       where acct_month>=202009 and acct_month<=202011 and user_status='在网-正常' and 
+                           phone_no_null is null and
+                           last_stop_date is not null and
+                           innet_months >= 3 and
+                           dayvalue_calling_dura>0
+                        and flag_eg is not null;
+20220624-15:26:46      sql执行完毕
+20220624-15:26:46  统计kehujingyingbudb.mid_eg_model_train_202011行列数
+20220624-15:26:47      行数：{'202009': 9625, '202010': 6238, '202011': 6308}
+                       列数：4
+
+
+20220624-15:26:47  ---- 建表语句（划分训练/验证数据集）：
+                       drop table if exists kehujingyingbudb.mid_eg_user_train_202011;
+                       create  table kehujingyingbudb.mid_eg_user_train_202011 as 
+                       (select acct_month user_acct_month, 'data_timein' data_use, * from kehujingyingbudb.mid_eg_model_train_202011 where rnself <= 500)
+                       union all
+                       (select acct_month user_acct_month, 'data_train'  data_use, * from kehujingyingbudb.mid_eg_model_train_202011 where rnself > 500 and flag_eg=1 order by rnself limit 1000)
+                       union all
+                       (select acct_month user_acct_month, 'data_train'  data_use, * from kehujingyingbudb.mid_eg_model_train_202011 where rnself > 500 and flag_eg=0 order by rnself limit 2000) ;
+20220624-15:26:47      sql执行完毕
+20220624-15:26:47  正负例分布：select cast(flag_eg as text) flag_eg, count(1) from kehujingyingbudb.mid_eg_user_train_202011  group by flag_eg
+20220624-15:26:47      dis_train_sample {'count': 3500, 'Pcount': 1064, 'prop': 0.304}
+
+
+
+20220624-15:26:47  ---- 关联近n月数据：
+                       drop table if exists kehujingyingbudb.mid_eg_recent_train_202011;
+                       create  table kehujingyingbudb.mid_eg_recent_train_202011 as
+                       select user_acct_month, data_use, acct_month, phone_no_null, phone_no_tm, user_id, dinner_id, account_id, innet_date, innet_months, age, sex, age_add, sex_add, user_status, last_stop_date, dinner, dinner_fee, gprs_last_defer, gprs_resource, gprs_now_rest, call_use, if_nolimit, if_5g_dinner, if_5g_term, if_jt, start_level, cred_type, if_cred_multi, arpu, pay_cnt, pay_fee, acct_balance, term_model, term_brand, term_type, sk_type, if_new_term, calling_cnt, calling_dura, called_cnt, called_dura, calling_diff_cnt, calling_diff_dura, gprs_flow, gprs_flow_4g, gprs_flow_5g, gprs_flow_busy, gprs_flow_idle, gprs_now_defer, gprs_flow_roam, call_dura_roam, days_roam, gprs_flow_gat, days_gat, days_gprs, days_call, nos_call, nos_calling, nos_calling_diff, sms_cnt, call_fee_local, call_fee_roam, gprs_income, gprs_fee, call_fee, gprs_flow_video, gprs_flow_short, gprs_flow_music, gprs_flow_commu, gprs_flow_game, dayvalue_calling_dura, dayvalue_gprs_flow, dayvalue_user_status, dayvalue_phone_no_null, flag_eg, score_flag_eg, score_flag_eg2 
+                       from (
+                       select a.user_acct_month, a.data_use, b.*
+                       from (select * from kehujingyingbudb.mid_eg_user_train_202011 where data_use='data_timein') a
+                       inner join (select * from kehujingyingbudb.ml_xy_eg_m where acct_month>=202009 and acct_month<=202011) b on a.user_id = b.user_id
+                       union all 
+                       select a.user_acct_month, a.data_use, b.*
+                       from (select * from kehujingyingbudb.mid_eg_user_train_202011 where data_use='data_train' and acct_month=202009) a
+                       inner join (select * from kehujingyingbudb.ml_xy_eg_m where acct_month>=202007 and acct_month<=202009) b on a.user_id = b.user_id
+                       union all
+                       select a.user_acct_month, a.data_use, b.*
+                       from (select * from kehujingyingbudb.mid_eg_user_train_202011 where data_use='data_train' and acct_month=202010) a
+                       inner join (select * from kehujingyingbudb.ml_xy_eg_m where acct_month>=202008 and acct_month<=202010) b on a.user_id = b.user_id
+                       union all
+                       select a.user_acct_month, a.data_use, b.*
+                       from (select * from kehujingyingbudb.mid_eg_user_train_202011 where data_use='data_train' and acct_month=202011) a
+                       inner join (select * from kehujingyingbudb.ml_xy_eg_m where acct_month>=202009 and acct_month<=202011) b on a.user_id = b.user_id
+                       ) t;
+20220624-15:26:47      sql执行完毕
+20220624-15:26:47  统计kehujingyingbudb.mid_eg_recent_train_202011行列数
+20220624-15:26:47      10500行，78列
+
+                   --------------------------------- 核验各账期数据量  ---------------------------------------------- 
+20220624-15:26:47  sql语句：
+                       select user_acct_month, data_use, acct_month, flag_eg, count(1) 
+                       from kehujingyingbudb.mid_eg_recent_train_202011 
+                       group by user_acct_month, data_use, acct_month, flag_eg 
+                       order by user_acct_month, data_use, acct_month, flag_eg
+
+20220624-15:26:47  结果：
+                       user_acct_month     data_use  acct_month  flag_eg  count
+                   0            202010   data_train      202008      NaN     96
+                   1            202010   data_train      202009      1.0     96
+                   2            202010   data_train      202010      1.0     96
+                   3            202011  data_timein      202009      0.0    436
+                   4            202011  data_timein      202009      1.0     64
+                   5            202011  data_timein      202010      0.0    436
+                   6            202011  data_timein      202010      1.0     64
+                   7            202011  data_timein      202011      0.0    436
+                   8            202011  data_timein      202011      1.0     64
+                   9            202011   data_train      202009      0.0   2000
+                   10           202011   data_train      202009      1.0    904
+                   11           202011   data_train      202010      0.0   2000
+                   12           202011   data_train      202010      1.0    904
+                   13           202011   data_train      202011      0.0   2000
+                   14           202011   data_train      202011      1.0    904
+20220624-15:26:47  
+                   ---- 删除中间表
+20220624-15:26:47  drop table if exists kehujingyingbudb.mid_eg_model_train_202011;
+20220624-15:26:47      sql执行完毕
+20220624-15:26:47  drop table if exists kehujingyingbudb.mid_eg_user_train_202011;
+20220624-15:26:47      sql执行完毕
+
+20220624-15:26:47  ---- 返回结果表名：kehujingyingbudb.mid_eg_recent_train_202011
+20220624-15:26:47  ---- 将Info保存至./binaryclassify/eg/traintest~202011~202012/Info~base_train.pkl
+
+20220624-15:26:47  结束时间：2022-06-24 15:26:47
+20220624-15:26:47  耗时：6 s
+
+                   ###################################################################### 探索模型宽表
+                    
+20220624-15:26:47  开始时间：2022-06-24 15:26:47
+20220624-15:26:47  参数设置：
+                       step: train
+                       Info.auto_pair2: False
+                       Info.iv_limit: 0.05
+                       table_in: kehujingyingbudb.mid_eg_recent_train_202011
+                       stage: explore
+                       Info.model_name: 模型示例
+                       Info.r_limit: 0.95
+
+20220624-15:26:47  field_base: 92行
+
+20220624-15:26:47  删除7个available_notzd“不可用”字段：['cred_type', 'called_dura', 'days_roam', 'dayvalue_calling_dura', 'dayvalue_gprs_flow', 'dayvalue_user_status', 'dayvalue_phone_no_null']
+20220624-15:26:47  field_base: 85行
+
+20220624-15:26:47  删除1个基于“不可用”字段加工的手动衍生_py字段：
+                        field_name                 formula
+                   54  days_roam_p  days_roam / days_month
+20220624-15:26:47  field_base: 84行
+20220624-15:26:47  ------------------------- 读取数据: kehujingyingbudb.mid_eg_recent_train_202011 2022-06-24 15:26:47 -------------------------
+20220624-15:26:47      src: gp
+20220624-15:26:47      condition: data_use='data_train'
+20220624-15:26:47      col_need(71): ['user_acct_month', 'data_use', 'acct_month', 'user_id', 'innet_months', 'age', 'age_add', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'arpu', 'pay_cnt', 'pay_fee', 'acct_balance', 'calling_cnt', 'calling_dura', 'called_cnt', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow', 'gprs_flow_4g', 'gprs_flow_5g', 'gprs_flow_busy', 'gprs_flow_idle', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'gprs_flow_gat', 'days_gat', 'days_gprs', 'days_call', 'nos_call', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'call_fee_roam', 'gprs_income', 'gprs_fee', 'call_fee', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'score_flag_eg', 'score_flag_eg2', 'innet_date', 'last_stop_date', 'phone_no_null', 'phone_no_tm', 'dinner_id', 'account_id', 'sex', 'sex_add', 'user_status', 'dinner', 'if_nolimit', 'if_5g_dinner', 'if_5g_term', 'if_jt', 'start_level', 'if_cred_multi', 'term_model', 'term_brand', 'term_type', 'sk_type', 'if_new_term', 'flag_eg']
+20220624-15:26:47      col_del: None
+20220624-15:26:47      col_char(22): ['acct_month', 'phone_no_null', 'phone_no_tm', 'user_id', 'dinner_id', 'account_id', 'sex', 'sex_add', 'user_status', 'dinner', 'if_nolimit', 'if_5g_dinner', 'if_5g_term', 'if_jt', 'start_level', 'if_cred_multi', 'term_model', 'term_brand', 'term_type', 'sk_type', 'if_new_term', 'flag_eg']
+20220624-15:26:47      col_num(45): ['innet_months', 'age', 'age_add', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'arpu', 'pay_cnt', 'pay_fee', 'acct_balance', 'calling_cnt', 'calling_dura', 'called_cnt', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow', 'gprs_flow_4g', 'gprs_flow_5g', 'gprs_flow_busy', 'gprs_flow_idle', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'gprs_flow_gat', 'days_gat', 'days_gprs', 'days_call', 'nos_call', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'call_fee_roam', 'gprs_income', 'gprs_fee', 'call_fee', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'score_flag_eg', 'score_flag_eg2']
+20220624-15:26:47      col_date(2): ['innet_date', 'last_stop_date']
+20220624-15:26:47      nrows: None
+20220624-15:26:47      if_coltolower: True
+20220624-15:26:47      kwargs: {}
+
+20220624-15:26:47      读取
+20220624-15:26:50      shape: (9000, 71)
+
+20220624-15:26:50  将score_flag_eg2字段类型(object): .astype(float)
+20220624-15:26:50  -------------------------读取完毕: (9000, 71) 2022-06-24 15:26:50 -------------------------
+
+20220624-15:26:50  统一user_acct_month --------------------------------------
+20220624-15:26:50  user_acct_month: ['202010' '202011']
+20220624-15:26:50  修改 user_id (user_acct_month _ user_id)
+20220624-15:26:50  修改 acct_month
+20220624-15:26:50      修改 user_acct_month - 202010 的acct_month
+20220624-15:26:50      修改量：288
+20220624-15:26:50  统一user_acct_month 完毕 ---------------------------------
+
+20220624-15:26:50  手动衍生_py12个字段: {'monthsaready_last_stop_date': '最后停机时间：已发生时长', 'monthsremain_last_stop_date': '最后停机时间：剩余时长', 'days_gprs_p': '上网天数占比', 'days_call_p': '通话天数占比', 'days_call_p_1': '通话天数占比_1', 'days_call_p_2': '通话天数占比_2', 'days_call_p_3': '通话天数占比_3', 'days_call_p_4': '通话天数占比_4', 'greatest_gprs_app': 'app偏好', 'paste_dinner_innet_months': '主套餐、入网时长：交叉', 'ago_score_flag_eg': '模型示例的分数(历史)', 'ago_score_flag_eg2': '模型示例2的分数(历史)'}
+20220624-15:26:50  monthsaready_last_stop_date: current_date - last_stop_date
+20220624-15:26:51  monthsremain_last_stop_date: last_stop_date - current_date
+20220624-15:26:51  days_gprs_p: days_gprs / days_month
+20220624-15:26:51  days_call_p: days_call / days_month
+20220624-15:26:51  days_call_p_1: days_call_p + days_gprs
+20220624-15:26:51  days_call_p_2: days_call_p_1 + days_gprs
+20220624-15:26:51  days_call_p_3: days_call_p_2 + days_gprs
+20220624-15:26:51  days_call_p_4: days_call_p_3 + days_gprs
+20220624-15:26:51  greatest_gprs_app: {'gprs_flow_video': 'video', 'gprs_flow_short': 'short', 'gprs_flow_music': 'music', 'gprs_flow_commu': 'commu', 'gprs_flow_game': 'game'}
+20220624-15:26:52  paste_dinner_innet_months: (dinner, innet_months)
+20220624-15:26:56  ago_score_flag_eg: {'notago_tovalue': 1}
+20220624-15:26:56  ago_score_flag_eg2: {'notago_tovalue': 1}
+
+
+Traceback (most recent call last):
+  File "<ipython-input-6-d605848579c6>", line 29, in <module>
+    exp, Info = tab_explore_create(base_train[model_name], Info, 'explore', src)
+  File "D:\工作\模型脚本\ModelProject\selfmodule\tablemodule\tablefun.py", line 1866, in tab_explore_create
+    data_recent, col_need_ad = manual_fun(data_recent, Info, field_manual)
+  File "D:\工作\模型脚本\ModelProject\selfmodule\tablemodule\tablefun.py", line 1281, in manual_fun
+    na_inf_examine(data_recent[field_manual.field_name])
+  File "D:\工作\模型脚本\ModelProject\selfmodule\toolmodule\dataprep.py", line 142, in na_inf_examine
+    raise Exception(s)
+Exception: 数据存在缺失值或±inf，请检查！
+
+缺失值：
+ago_score_flag_eg2    6000
+dtype: int64

@@ -1,0 +1,1545 @@
+20220620-15:35:13  加载训练结果：./binaryclassify/eg/traintest~202010~202012/train_result~202010~202012.pkl
+20220620-15:35:14  从训练结果中获取Info,并加入预测所需信息
+
+
+                   ###################################################################### 加工预测账期近n月基础数据
+                    
+20220620-15:35:14  开始时间：2022-06-20 15:35:14
+20220620-15:35:14  ---- month: 202012
+20220620-15:35:14  ---- 参数设置：
+                       ---- step: predict
+                       ---- Info.model_name: 模型示例
+                       ---- Info.n_recent: 3
+
+                   ------------------------------------- 检查各前置表 --------------------------------------------------- 
+20220620-15:35:14  检查 kehujingyingbudb.ml_xy_eg_m
+20220620-15:35:14      78 列
+20220620-15:35:14      202012账期： 15000行
+20220620-15:35:14      202011账期： 10000行
+20220620-15:35:14      202010账期： 15000行
+
+
+20220620-15:35:14          dis_predict_total {'count':             count
+                   acct_month       
+                   202012      15000}
+20220620-15:35:14  数据量：select  count(1) from kehujingyingbudb.ml_xy_eg_m where acct_month=202012 and user_status='在网-正常' and 
+                       phone_no_null is null and
+                       last_stop_date is not null and
+                       innet_months >= 3
+20220620-15:35:14      dis_predict_model {'count': 12449}
+
+
+                   ------------------- 关联近n月数据：kehujingyingbudb.mid_eg_recent_predict_202012 ------------------------------- 
+
+
+20220620-15:35:14  ---- 关联近n月数据：
+                       drop table if exists kehujingyingbudb.mid_eg_recent_predict_202012;
+                       create  table kehujingyingbudb.mid_eg_recent_predict_202012 as
+                       select user_acct_month, data_use, acct_month, phone_no_null, user_id, account_id, innet_months, age_add, user_status, last_stop_date, dinner_fee, gprs_last_defer, gprs_resource, gprs_now_rest, call_use, if_nolimit, if_5g_dinner, arpu, calling_cnt, calling_dura, calling_diff_cnt, calling_diff_dura, gprs_flow_busy, gprs_now_defer, gprs_flow_roam, call_dura_roam, nos_calling, nos_calling_diff, sms_cnt, call_fee_local, gprs_flow_video, gprs_flow_short, gprs_flow_music, gprs_flow_commu, gprs_flow_game 
+                       from (
+                       select a.user_acct_month, a.data_use, b.*
+                       from (select acct_month user_acct_month, 'data_predict' data_use, * from kehujingyingbudb.ml_xy_eg_m where acct_month=202012 and user_status='在网-正常' and 
+                           phone_no_null is null and
+                           last_stop_date is not null and
+                           innet_months >= 3) a
+                       inner join (select * from kehujingyingbudb.ml_xy_eg_m where acct_month>=202010 and acct_month<=202012) b on a.user_id = b.user_id
+                       ) t;
+20220620-15:35:14      sql执行完毕
+20220620-15:35:14  统计kehujingyingbudb.mid_eg_recent_predict_202012行列数
+20220620-15:35:15      33076行，35列
+
+                   --------------------------------- 核验各账期数据量  ---------------------------------------------- 
+20220620-15:35:15  sql语句：
+                       select user_acct_month, data_use, acct_month, count(1) 
+                       from kehujingyingbudb.mid_eg_recent_predict_202012 
+                       group by user_acct_month, data_use, acct_month 
+                       order by user_acct_month, data_use, acct_month
+
+20220620-15:35:15  结果：
+                      user_acct_month      data_use  acct_month  count
+                   0           202012  data_predict      202010  12449
+                   1           202012  data_predict      202011   8178
+                   2           202012  data_predict      202012  12449
+
+
+D:\工作\模型脚本\ModelProject\selfmodule\tablemodule\tablefun.py:895: UserWarning: 下列账期用户量不同，请检查！
+                              acct_month  count
+user_acct_month data_use                       
+202012          data_predict      202010  12449
+                data_predict      202011   8178
+                data_predict      202012  12449
+  warnings.warn(w); time.sleep(seconds)
+20220620-15:35:18  
+                   ---- 删除中间表
+20220620-15:35:18  drop table if exists kehujingyingbudb.mid_eg_user_predict_202012;
+20220620-15:35:18      sql执行完毕
+
+20220620-15:35:18  ---- 返回结果表名：kehujingyingbudb.mid_eg_recent_predict_202012
+20220620-15:35:18  ---- 将Info保存至./binaryclassify/eg/traintest~202010~202012/Info~base_predict.pkl
+
+20220620-15:35:18  结束时间：2022-06-20 15:35:18
+20220620-15:35:18  耗时：4 s
+
+
+20220620-15:35:18  将数据拆分成 4 份分别预测
+
+20220620-15:35:18  =========================================== 0份：['0', '1', '2'] ==========================================
+20220620-15:35:18  修改Info，用于分批预测
+20220620-15:35:18  condition: right(cast(user_id as text), 1) in ('0', '1', '2')
+                   table_predict:./binaryclassify/eg//predictscore~202012/predict_data~202012~0.csv
+                   table_score:./binaryclassify/eg//predictscore~202012/predict_score_data~202010~202012~202012~0.csv
+
+                   ###################################################################### 预测集加工
+                    
+20220620-15:35:18  开始时间：2022-06-20 15:35:18
+20220620-15:35:18  参数设置：
+                       Info.iv_limit: 0.05
+                       stage: create
+                       Info.model_name: 模型示例
+                       step: predict
+                       Info.auto_pair2: False
+                       table_in: kehujingyingbudb.mid_eg_recent_predict_202012
+                       Info.r_limit: 0.95
+
+20220620-15:35:21  ------------------------- 读取数据: kehujingyingbudb.mid_eg_recent_predict_202012 2022-06-20 15:35:21 -------------------------
+20220620-15:35:21      src: gp
+20220620-15:35:21      condition: right(cast(user_id as text), 1) in ('0', '1', '2')
+20220620-15:35:21      col_need(33): ['user_acct_month', 'data_use', 'acct_month', 'user_id', 'account_id', 'innet_months', 'age_add', 'last_stop_date', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'if_nolimit', 'if_5g_dinner', 'arpu', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game']
+20220620-15:35:21      col_del: None
+20220620-15:35:21      col_char(7): ['user_acct_month', 'data_use', 'acct_month', 'user_id', 'account_id', 'if_nolimit', 'if_5g_dinner']
+20220620-15:35:21      col_num(25): ['innet_months', 'age_add', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'arpu', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game']
+20220620-15:35:21      col_date(1): ['last_stop_date']
+20220620-15:35:21      nrows: None
+20220620-15:35:21      if_coltolower: True
+20220620-15:35:21      kwargs: {}
+
+20220620-15:35:21      读取
+20220620-15:35:22      shape: (10178, 33)
+
+20220620-15:35:22  -------------------------读取完毕: (10178, 33) 2022-06-20 15:35:22 -------------------------
+
+20220620-15:35:22  手动衍生_py2个字段: {'monthsremain_last_stop_date': '最后停机时间：剩余时长', 'greatest_gprs_app': 'app偏好'}
+20220620-15:35:22  monthsremain_last_stop_date: last_stop_date - current_date
+20220620-15:35:23  greatest_gprs_app: {'gprs_flow_video': 'video', 'gprs_flow_short': 'short', 'gprs_flow_music': 'music', 'gprs_flow_commu': 'commu', 'gprs_flow_game': 'game'}
+20220620-15:35:25  数据量: (10178, 35)
+
+20220620-15:35:25  检查数据
+20220620-15:35:25  各账期数据量分布：
+                       202010  data_predict    3833
+                       202011  data_predict    2512
+                       202012  data_predict    3833
+                       dtype: int64
+20220620-15:35:25  各账期数据量不一致
+20220620-15:35:25  以nan填充缺少账期的记录
+20220620-15:35:25      修改后：
+                       202010  data_predict    3833
+                       202011  data_predict    3833
+                       202012  data_predict    3833
+                       dtype: int64)
+20220620-15:35:25  
+                   diff_limitweiNone,不考察近n月字段各账期取值分布, dis_exam返回None！
+
+
+20220620-15:35:25  填充数值型&类别型字段缺失值
+20220620-15:35:25  日期型字段缺失值情况：
+                       last_stop_date    1321
+                       dtype: int64
+
+                   ----------------------------------------- 当月 类别型 onthot 
+
+                   ----------------------------------------- 当月 数值型&类别型 原始数据 
+20220620-15:35:25  (3833, 27)
+20220620-15:35:25  筛选衍生字段的 原始/手动衍生_sql 字段
+
+                   ----------------------------------------- 近n月 数值型 近3月均值 
+20220620-15:35:25  字段个数：19, 添加字段：None
+20220620-15:35:25  (3833, 46)
+
+                   ----------------------------------------- 近n月 数值型 近3月离散系数 
+20220620-15:35:25  字段个数：10, 添加字段：None
+20220620-15:35:25  (3833, 56)
+
+                   ----------------------------------------- 近n月 数值型 近3月波动性 
+20220620-15:35:25  字段个数：8, 添加字段：None
+20220620-15:35:25  (3833, 64)
+
+                   ----------------------------------------- 近n月 数值型 近3月成长率 
+20220620-15:35:25  字段个数：9, 添加字段：None
+20220620-15:35:25  (3833, 73)
+
+                   ----------------------------------------- 近n月 数值型 近3月最大值 
+20220620-15:35:25  字段个数：20, 添加字段：None
+20220620-15:35:25  (3833, 93)
+
+                   ----------------------------------------- 近n月 数值型 近3月最小值 
+20220620-15:35:25  字段个数：12, 添加字段：None
+20220620-15:35:25  (3833, 105)
+
+                   ----------------------------------------- 近n月 数值型 近3月标准差 
+20220620-15:35:25  字段个数：16, 添加字段：None
+20220620-15:35:25  (3833, 121)
+
+                   ----------------------------------------- 近n月 数值型 大于x的月份数 
+20220620-15:35:25  ('more0cnt', '近3月大于0的月份数')
+20220620-15:35:25  ('moreq25cnt', '近3月大于第一四分位数的月份数')
+20220620-15:35:25  (3833, 134)
+
+                   ----------------------------------------- 近n月 类别型 取某值的月份数 
+20220620-15:35:25  字段个数：2, 添加字段：None
+20220620-15:35:26  (3833, 136)
+
+                   ----------------------------------------- 汇总最终宽表 
+20220620-15:35:26  table.shape:(3833, 136)
+
+20220620-15:35:26  保存宽表结果至：./binaryclassify/eg//predictscore~202012/predict_data~202012~0.csv
+
+20220620-15:35:26  计算字段之间的相关性系数
+20220620-15:35:26  
+                       count    8128.0
+                       mean    0.174
+                       std    0.195
+                       min    0.0
+                       25%    0.042
+                       50%    0.107
+                       75%    0.225
+                       max    1.0
+                       dtype: float64
+
+
+                   ------------------------------- 计算宽表字段psi ------------------------------------ 
+                    
+                    20220620-15:35:26  my toolmodule.dataprep.PsiTransformer_DF transform
+                    20220620-15:35:26      开始时间：2022-06-20 15:35:26
+                    20220620-15:35:26      data in : (3833, 143)
+                    20220620-15:35:26      self已带有id_X属性 2267646353928
+                    20220620-15:35:26      首次从X获取id_X_new属性 2267653277792
+                    20220620-15:35:26      data in2: (3833, 137)
+                    20220620-15:35:26      对134个数值字段进行分箱：['innet_months', 'age_add', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_flow_roam', 'call_dura_roam', 'days_call_p_4', 'nos_calling', 'nos_calling_diff', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'avg__calling_diff_dura', 'avg__dinner_fee', 'avg__nos_calling', 'avg__call_use', 'avg__call_dura_roam', 'avg__gprs_flow_video', 'avg__calling_dura', 'avg__gprs_last_defer', 'avg__calling_diff_cnt', 'avg__gprs_resource', 'avg__calling_cnt', 'avg__nos_calling_diff', 'avg__gprs_now_defer', 'avg__gprs_flow_busy', 'avg__arpu', 'avg__monthsremain_last_stop_date', 'avg__gprs_flow_game', 'avg__gprs_now_rest', 'avg__gprs_flow_roam', 'sep__calling_diff_dura', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__gprs_flow_video', 'sep__calling_dura', 'sep__calling_diff_cnt', 'sep__calling_cnt', 'sep__gprs_flow_music', 'sep__monthsremain_last_stop_date', 'sep__gprs_now_rest', 'wave__gprs_flow_commu', 'wave__call_use', 'wave__gprs_flow_video', 'wave__gprs_last_defer', 'wave__gprs_flow_short', 'wave__gprs_flow_music', 'wave__gprs_now_defer', 'wave__gprs_now_rest', 'grow__dinner_fee', 'grow__call_use', 'grow__gprs_last_defer', 'grow__calling_diff_cnt', 'grow__calling_cnt', 'grow__gprs_flow_music', 'grow__gprs_now_defer', 'grow__gprs_flow_busy', 'grow__arpu', 'grow__gprs_flow_game', 'grow__gprs_now_rest', 'grow__gprs_flow_roam', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__nos_calling', 'max__call_use', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_dura', 'max__gprs_last_defer', 'max__calling_diff_cnt', 'max__gprs_flow_short', 'max__gprs_resource', 'max__calling_cnt', 'max__nos_calling_diff', 'max__gprs_flow_music', 'max__gprs_now_defer', 'max__gprs_flow_busy', 'max__arpu', 'max__gprs_now_rest', 'max__gprs_flow_roam', 'min__gprs_flow_commu', 'min__dinner_fee', 'min__call_use', 'min__gprs_flow_video', 'min__gprs_last_defer', 'min__gprs_flow_short', 'min__gprs_resource', 'min__gprs_flow_music', 'min__gprs_now_defer', 'min__gprs_flow_busy', 'min__arpu', 'min__gprs_now_rest', 'min__gprs_flow_roam', 'std__calling_diff_dura', 'std__gprs_flow_commu', 'std__dinner_fee', 'std__nos_calling', 'std__call_use', 'std__call_dura_roam', 'std__calling_dura', 'std__gprs_last_defer', 'std__calling_diff_cnt', 'std__gprs_resource', 'std__calling_cnt', 'std__nos_calling_diff', 'std__gprs_flow_busy', 'std__arpu', 'std__gprs_now_rest', 'std__gprs_flow_roam', 'more0cnt__nos_calling', 'more0cnt__calling_cnt', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__call_use', 'moreq25cnt__gprs_flow_video', 'moreq25cnt__calling_dura', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_resource', 'moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是']
+                    20220620-15:35:26      timedata_predict 计算稳定度（不区分正负例）：self.col_psi_all_
+                    20220620-15:35:37      data out: (3833, 137)
+                    20220620-15:35:37      transform轨迹：PsiTransformer_DF(Ncase='0', Pcase='1', bins=None, col_ignore=None, fit_pop_all=False, precision=6, , psi_limit=0.1, trans_na_error=True, warn_mark=' PsiTransformer')
+                    20220620-15:35:37      结束时间：2022-06-20 15:35:37 耗时(11s)
+20220620-15:35:37  保存Psi至：./binaryclassify/eg//predictscore~202012/predict_Psi~202010~202012~0.pkl
+20220620-15:35:37  保存dis_exam至：./binaryclassify/eg//predictscore~202012/predict_dis_exam~202012~0.pkl
+20220620-15:35:37  结束时间：2022-06-20 15:35:37
+20220620-15:35:37  耗时：19 s
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: stage取值为create时,r_limit, iv_limit参数无效，将被忽略
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer timedata_predict 计算稳定性(不区分正负例) ['account_id']字段多出2733个取值, .head(5):
+                      old  new
+field      value              
+account_id 101572366  NaN  1.0
+           101798527  NaN  1.0
+           101817036  NaN  1.0
+           101875592  NaN  1.0
+           101994315  NaN  1.0
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer timedata_predict 计算稳定性(不区分正负例)，14个字段稳定性>=psi_limit（0.1）：
+sep__monthsremain_last_stop_date    0.551724
+grow__arpu                          0.442186
+account_id                          0.424031
+grow__call_use                      0.419227
+grow__calling_cnt                   0.379251
+grow__gprs_now_defer                0.332849
+grow__gprs_now_rest                 0.326160
+sep__gprs_flow_video                0.257708
+sep__gprs_flow_commu                0.198025
+grow__gprs_flow_busy                0.194422
+wave__gprs_flow_music               0.138228
+wave__gprs_flow_commu               0.134760
+wave__gprs_flow_video               0.117219
+wave__gprs_flow_short               0.101424
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer data_predict X未带有y_carrier属性，不计算稳定度（区分正负例）
+  convert=self.convert_dtype,
+
+                   ###################################################################### 预测打分过程
+                    
+20220620-15:35:37  开始时间：2022-06-20 15:35:37
+20220620-15:35:37  模型名称：模型示例
+20220620-15:35:37  预测账期：202012
+20220620-15:35:37  提取模型结果: ratio_1_1 | pipeline2 | LGBMClassifier_DF - boosting_type='dart', objective='binary', num_leaves=511, learning_rate=0.1, colsample_bytree=0.8, subsample=0.6, subsample_freq=20
+20220620-15:35:37  模型 [宽带探索]~训练~测试 账期：~202010~202012
+20220620-15:35:37  最优模型的流水线不是pipeline1，为进行“top原因匹配”， 加载train_model_flows，从中获取pipeline1
+20220620-15:35:37      加载模型集合：./binaryclassify/eg/traintest~202010~202012/train_model_flows~202010~202012.pkl
+20220620-15:35:38      从train_model_flows中获取pipeline1
+20220620-15:35:38  建模时效果评估数据集：data_timeout
+
+20220620-15:35:38  ------------------------- 读取数据: ./binaryclassify/eg//predictscore~202012/predict_data~202012~0.csv 2022-06-20 15:35:38 -------------------------
+20220620-15:35:38      src: file
+20220620-15:35:38      condition: None
+20220620-15:35:38      col_need(134): ['acct_month', 'user_id', 'sms_cnt', 'call_fee_local', 'account_id', 'innet_months', 'age_add', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_flow_roam', 'call_dura_roam', 'nos_calling', 'nos_calling_diff', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'greatest_gprs_app', 'avg__calling_diff_dura', 'avg__dinner_fee', 'avg__nos_calling', 'avg__call_use', 'avg__call_dura_roam', 'avg__gprs_flow_video', 'avg__calling_dura', 'avg__gprs_last_defer', 'avg__calling_diff_cnt', 'avg__gprs_resource', 'avg__calling_cnt', 'avg__nos_calling_diff', 'avg__gprs_now_defer', 'avg__gprs_flow_busy', 'avg__arpu', 'avg__monthsremain_last_stop_date', 'avg__gprs_flow_game', 'avg__gprs_now_rest', 'avg__gprs_flow_roam', 'sep__calling_diff_dura', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__gprs_flow_video', 'sep__calling_dura', 'sep__calling_diff_cnt', 'sep__calling_cnt', 'sep__gprs_flow_music', 'sep__monthsremain_last_stop_date', 'sep__gprs_now_rest', 'wave__gprs_flow_commu', 'wave__call_use', 'wave__gprs_flow_video', 'wave__gprs_last_defer', 'wave__gprs_flow_short', 'wave__gprs_flow_music', 'wave__gprs_now_defer', 'wave__gprs_now_rest', 'grow__call_use', 'grow__gprs_last_defer', 'grow__calling_cnt', 'grow__gprs_flow_music', 'grow__gprs_now_defer', 'grow__gprs_flow_busy', 'grow__arpu', 'grow__gprs_flow_game', 'grow__gprs_now_rest', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__nos_calling', 'max__call_use', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_dura', 'max__gprs_last_defer', 'max__calling_diff_cnt', 'max__gprs_flow_short', 'max__gprs_resource', 'max__calling_cnt', 'max__nos_calling_diff', 'max__gprs_flow_music', 'max__gprs_now_defer', 'max__gprs_flow_busy', 'max__arpu', 'max__gprs_now_rest', 'max__gprs_flow_roam', 'min__gprs_flow_commu', 'min__dinner_fee', 'min__call_use', 'min__gprs_flow_video', 'min__gprs_last_defer', 'min__gprs_flow_short', 'min__gprs_resource', 'min__gprs_now_defer', 'min__gprs_flow_busy', 'min__arpu', 'min__gprs_now_rest', 'min__gprs_flow_roam', 'std__calling_diff_dura', 'std__gprs_flow_commu', 'std__dinner_fee', 'std__nos_calling', 'std__call_use', 'std__call_dura_roam', 'std__calling_dura', 'std__gprs_last_defer', 'std__calling_diff_cnt', 'std__gprs_resource', 'std__calling_cnt', 'std__nos_calling_diff', 'std__gprs_flow_busy', 'std__arpu', 'std__gprs_now_rest', 'std__gprs_flow_roam', 'more0cnt__nos_calling', 'more0cnt__calling_cnt', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__call_use', 'moreq25cnt__gprs_flow_video', 'moreq25cnt__calling_dura', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_resource', 'moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是']
+20220620-15:35:38      col_del: None
+20220620-15:35:38      col_char: None
+20220620-15:35:38      col_num: None
+20220620-15:35:38      col_date: None
+20220620-15:35:38      nrows: None
+20220620-15:35:38      if_coltolower: False
+20220620-15:35:38      kwargs: {}
+
+20220620-15:35:38      读取
+20220620-15:35:38  -------------------------读取完毕: (3833, 134) 2022-06-20 15:35:38 -------------------------
+
+20220620-15:35:38  补齐流水线删除的8个fit_in_colnames_字段
+20220620-15:35:38      数据量：(3833, 142)
+
+20220620-15:35:38  数据账期校验:
+20220620-15:35:38      通过
+
+20220620-15:35:38  最优模型 - pipeline2 - 数据转换
+20220620-15:35:38      从流水线中获取WoeTransformer_DF
+20220620-15:35:38      向WoeTransformer_DF.psi_.col_ignore补充流水线中删除的字段，不做稳定度检验（未读取，用np.nan填充）
+20220620-15:35:47      转换前shape：(3833, 142)
+20220620-15:35:47      转换后shape：(3833, 118)
+
+20220620-15:35:47  top原因匹配
+20220620-15:35:47      pipeline1 - 数据转换
+20220620-15:35:47      col_notcause：['acct_month', 'phone_no_null', 'user_id', 'account_id', 'last_stop_date']
+20220620-15:35:47      从流水线中获取WoeTransformer_DF
+20220620-15:35:47      向WoeTransformer_DF.psi_.col_ignore补充流水线中删除的字段，不做稳定度检验（未读取，用np.nan填充）
+
+20220620-15:35:47      数据分箱（union1） 2022-06-20 15:35:47
+20220620-15:35:49      转换前shape：(3833, 142)
+20220620-15:35:49      转换后shape：(3833, 130)
+
+20220620-15:35:49      woe转换 2022-06-20 15:35:49
+20220620-15:35:57      转换前shape：(3833, 130)
+20220620-15:35:57      转换后shape：(3833, 118)
+
+20220620-15:35:57      确定动因字段 2022-06-20 15:35:57
+20220620-15:35:57      剔除非动因字段（0个）：set()
+20220620-15:35:57      动因字段：118个
+
+20220620-15:35:57      计算动因字段的相关矩阵，删除高相关字段
+20220620-15:35:57      输入为相关性系数矩阵
+20220620-15:35:57      提取相关性超过0.8的字段
+20220620-15:35:57      需要删除50个高度相关字段: ['gprs_now_rest', 'grow__gprs_now_defer', 'max__calling_diff_cnt', 'max__gprs_flow_video', 'avg__calling_dura', 'more0cnt__calling_cnt', 'std__gprs_flow_commu', 'max__gprs_resource', 'calling_dura', 'moreq25cnt__gprs_flow_commu', 'avg__arpu', 'grow__call_use', 'calling_diff_cnt', 'sep__gprs_flow_music', 'avg__call_use', 'sep__calling_diff_dura', 'grow__calling_cnt', 'max__calling_diff_dura', 'max__gprs_last_defer', 'nos_calling', 'moreq25cnt__gprs_flow_short', 'avg__gprs_flow_roam', 'gprs_flow_busy', 'max__nos_calling', 'avg__call_dura_roam', 'max__nos_calling_diff', 'wave__gprs_flow_commu', 'avg__gprs_now_rest', 'grow__gprs_flow_music', 'max__gprs_now_defer', 'max__dinner_fee', 'moreq25cnt__gprs_flow_video', 'sep__call_use', 'calling_diff_dura', 'std__gprs_flow_busy', 'sep__calling_cnt', 'gprs_flow_short', 'avg__calling_diff_dura', 'min__gprs_flow_short', 'wave__gprs_flow_short', 'calling_cnt', 'avg__calling_cnt', 'max__call_dura_roam', 'gprs_flow_video', 'sep__gprs_flow_commu', 'min__gprs_flow_video', 'gprs_flow_commu', 'avg__nos_calling_diff', 'avg__gprs_last_defer', 'call_use']
+20220620-15:35:57      动因字段：68个
+
+20220620-15:35:57      从原因中删除用户量过小的 字段-取值
+20220620-15:35:57      阈值 valuecount_limit= 50
+20220620-15:35:57      将2个字段的2个取值（用户量<=50）从原因中剔除（对应的woe置为-999）
+
+20220620-15:35:57      原因排序 2022-06-20 15:35:57
+20220620-15:35:57      top1 2022-06-20 15:35:57
+20220620-15:35:57      top2 2022-06-20 15:35:57
+20220620-15:35:58      top3 2022-06-20 15:35:58
+20220620-15:35:58      排序结束 2022-06-20 15:35:58
+
+20220620-15:35:58      将woe<=woe_thred（0)的原因置空
+20220620-15:35:58      top1: 将5行woe<=woe_thred（0)的colname_top1, colcomment_top1, colvalue_top1, colwoe_top1置空
+20220620-15:35:58      top2: 将41行woe<=woe_thred（0)的colname_top2, colcomment_top2, colvalue_top2, colwoe_top2置空
+20220620-15:35:58      top3: 将115行woe<=woe_thred（0)的colname_top3, colcomment_top3, colvalue_top3, colwoe_top3置空
+
+
+20220620-15:35:58  模型预测
+
+20220620-15:35:58  匹配各分数档位查准率、提升度（非累计）
+
+20220620-15:35:58  概率得分描述统计：
+                                 score
+                       count  3833.000
+                       mean     45.100
+                       std      20.558
+                       min       8.394
+                       25%      29.013
+                       50%      41.170
+                       75%      58.696
+                       max      97.576
+
+20220620-15:35:58  概率得分分段统计：
+                                       用户量      占比
+                       (-0.001, 10.0]      10  0.002609
+                       (10.0, 20.0]       304  0.079311
+                       (20.0, 30.0]       726  0.189408
+                       (30.0, 40.0]       793  0.206888
+                       (40.0, 50.0]       622  0.162275
+                       (50.0, 60.0]       477  0.124446
+                       (60.0, 70.0]       360  0.093921
+                       (70.0, 80.0]       238  0.062092
+                       (80.0, 90.0]       182  0.047482
+                       (90.0, 100.0]      121  0.031568
+
+20220620-15:35:58  模型稳定度：0.05103
+
+20220620-15:35:58  结果数据展示：
+                          acct_month      user_id model_name  month_train  month_test   score  score_cut  precision lift  sms_cnt  call_fee_local             colname_top1                                colcomment_top1         colvalue_top1  colwoe_top1               colname_top2                                  colcomment_top2     colvalue_top2  colwoe_top2   colname_top3   colcomment_top3     colvalue_top3  colwoe_top3
+                       0      202012  10000211351   模型示例       202010      202012  19.707         10       0.05  0.3      0.0             0.0  valuecnt__if_nolimit~是  是否不限量套餐到达用户：近3月取值为是的月份数            (0.5, inf]     1.354546         min__gprs_resource                    gprs国内资源总量：近3月最小值  (7345162.0, inf]     1.064711  gprs_resource  gprs国内资源总量  (7345162.0, inf]     1.018981
+                       5      202012  10010992130   模型示例       202010      202012  23.681         10       0.05  0.3      0.0             0.0      grow__gprs_now_rest                  当月gprs资源余量：近3月成长率  (0.126128, 0.988813]     0.831070  moreq25cnt__gprs_resource  gprs国内资源总量：近3月大于第一四分位数的月份数        (1.5, inf]     0.172185            NaN               NaN               NaN          NaN
+
+20220620-15:35:58  保存结果数据至：./binaryclassify/eg//predictscore~202012/predict_score_data~202010~202012~202012~0.csv
+20220620-15:35:58  保存数据处理流水线至：./binaryclassify/eg//predictscore~202012/predict_result~202010~202012~202012~0.pkl
+
+20220620-15:35:58  结束时间：2022-06-20 15:35:58
+20220620-15:35:58  耗时：20 s
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline2 PsiTransformer timedata_predict 计算稳定性(不区分正负例)，11个字段稳定性>=psi_limit（0.1）：
+grow__gprs_now_rest                 0.611049
+sep__monthsremain_last_stop_date    0.551724
+grow__gprs_last_defer               0.546097
+grow__arpu                          0.442186
+grow__calling_cnt                   0.379251
+grow__gprs_now_defer                0.358415
+grow__call_use                      0.326126
+wave__gprs_flow_video               0.240003
+grow__gprs_flow_busy                0.229699
+sep__gprs_flow_commu                0.198025
+wave__gprs_flow_short               0.163690
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline2 PsiTransformer data_predict X未带有y_carrier属性，不计算稳定度（区分正负例）
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline1 PsiTransformer time2 计算稳定性(不区分正负例)，11个字段稳定性>=psi_limit（0.1）：
+grow__gprs_now_rest                 0.593126
+sep__monthsremain_last_stop_date    0.551724
+grow__gprs_last_defer               0.546097
+grow__arpu                          0.442186
+grow__calling_cnt                   0.379251
+grow__gprs_now_defer                0.358415
+grow__call_use                      0.326126
+wave__gprs_flow_video               0.240003
+grow__gprs_flow_busy                0.229699
+sep__gprs_flow_commu                0.198025
+wave__gprs_flow_short               0.163690
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline1 PsiTransformer  X未带有y_carrier属性，不计算稳定度（区分正负例）
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead.  To get a de-fragmented frame, use `newframe = frame.copy()`
+  convert=self.convert_dtype,
+20220620-15:35:58  ==========================================================================================
+
+20220620-15:35:58  =========================================== 1份：['3', '4', '5'] ==========================================
+20220620-15:35:58  修改Info，用于分批预测
+20220620-15:35:58  condition: right(cast(user_id as text), 1) in ('3', '4', '5')
+                   table_predict:./binaryclassify/eg//predictscore~202012/predict_data~202012~1.csv
+                   table_score:./binaryclassify/eg//predictscore~202012/predict_score_data~202010~202012~202012~1.csv
+
+                   ###################################################################### 预测集加工
+                    
+20220620-15:35:58  开始时间：2022-06-20 15:35:58
+20220620-15:35:58  参数设置：
+                       Info.iv_limit: 0.05
+                       stage: create
+                       Info.model_name: 模型示例
+                       step: predict
+                       Info.auto_pair2: False
+                       table_in: kehujingyingbudb.mid_eg_recent_predict_202012
+                       Info.r_limit: 0.95
+
+20220620-15:36:01  ------------------------- 读取数据: kehujingyingbudb.mid_eg_recent_predict_202012 2022-06-20 15:36:01 -------------------------
+20220620-15:36:01      src: gp
+20220620-15:36:01      condition: right(cast(user_id as text), 1) in ('3', '4', '5')
+20220620-15:36:01      col_need(33): ['user_acct_month', 'data_use', 'acct_month', 'user_id', 'account_id', 'innet_months', 'age_add', 'last_stop_date', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'if_nolimit', 'if_5g_dinner', 'arpu', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game']
+20220620-15:36:01      col_del: None
+20220620-15:36:01      col_char(7): ['user_acct_month', 'data_use', 'acct_month', 'user_id', 'account_id', 'if_nolimit', 'if_5g_dinner']
+20220620-15:36:01      col_num(25): ['innet_months', 'age_add', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'arpu', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game']
+20220620-15:36:01      col_date(1): ['last_stop_date']
+20220620-15:36:01      nrows: None
+20220620-15:36:01      if_coltolower: True
+20220620-15:36:01      kwargs: {}
+
+20220620-15:36:01      读取
+20220620-15:36:02      shape: (9051, 33)
+
+20220620-15:36:02  -------------------------读取完毕: (9051, 33) 2022-06-20 15:36:02 -------------------------
+
+20220620-15:36:02  手动衍生_py2个字段: {'monthsremain_last_stop_date': '最后停机时间：剩余时长', 'greatest_gprs_app': 'app偏好'}
+20220620-15:36:02  monthsremain_last_stop_date: last_stop_date - current_date
+20220620-15:36:03  greatest_gprs_app: {'gprs_flow_video': 'video', 'gprs_flow_short': 'short', 'gprs_flow_music': 'music', 'gprs_flow_commu': 'commu', 'gprs_flow_game': 'game'}
+20220620-15:36:04  数据量: (9051, 35)
+
+20220620-15:36:04  检查数据
+20220620-15:36:04  各账期数据量分布：
+                       202010  data_predict    3412
+                       202011  data_predict    2227
+                       202012  data_predict    3412
+                       dtype: int64
+20220620-15:36:05  各账期数据量不一致
+20220620-15:36:05  以nan填充缺少账期的记录
+20220620-15:36:05      修改后：
+                       202010  data_predict    3412
+                       202011  data_predict    3412
+                       202012  data_predict    3412
+                       dtype: int64)
+20220620-15:36:05  
+                   diff_limitweiNone,不考察近n月字段各账期取值分布, dis_exam返回None！
+
+
+20220620-15:36:05  填充数值型&类别型字段缺失值
+20220620-15:36:05  日期型字段缺失值情况：
+                       last_stop_date    1185
+                       dtype: int64
+
+                   ----------------------------------------- 当月 类别型 onthot 
+
+                   ----------------------------------------- 当月 数值型&类别型 原始数据 
+20220620-15:36:05  (3412, 27)
+20220620-15:36:05  筛选衍生字段的 原始/手动衍生_sql 字段
+
+                   ----------------------------------------- 近n月 数值型 近3月均值 
+20220620-15:36:05  字段个数：19, 添加字段：None
+20220620-15:36:05  (3412, 46)
+
+                   ----------------------------------------- 近n月 数值型 近3月离散系数 
+20220620-15:36:05  字段个数：10, 添加字段：None
+20220620-15:36:05  (3412, 56)
+
+                   ----------------------------------------- 近n月 数值型 近3月波动性 
+20220620-15:36:05  字段个数：8, 添加字段：None
+20220620-15:36:05  (3412, 64)
+
+                   ----------------------------------------- 近n月 数值型 近3月成长率 
+20220620-15:36:05  字段个数：9, 添加字段：None
+20220620-15:36:05  (3412, 73)
+
+                   ----------------------------------------- 近n月 数值型 近3月最大值 
+20220620-15:36:05  字段个数：20, 添加字段：None
+20220620-15:36:05  (3412, 93)
+
+                   ----------------------------------------- 近n月 数值型 近3月最小值 
+20220620-15:36:05  字段个数：12, 添加字段：None
+20220620-15:36:05  (3412, 105)
+
+                   ----------------------------------------- 近n月 数值型 近3月标准差 
+20220620-15:36:05  字段个数：16, 添加字段：None
+20220620-15:36:05  (3412, 121)
+
+                   ----------------------------------------- 近n月 数值型 大于x的月份数 
+20220620-15:36:05  ('more0cnt', '近3月大于0的月份数')
+20220620-15:36:05  ('moreq25cnt', '近3月大于第一四分位数的月份数')
+20220620-15:36:05  (3412, 134)
+
+                   ----------------------------------------- 近n月 类别型 取某值的月份数 
+20220620-15:36:05  字段个数：2, 添加字段：None
+20220620-15:36:05  (3412, 136)
+
+                   ----------------------------------------- 汇总最终宽表 
+20220620-15:36:05  table.shape:(3412, 136)
+
+20220620-15:36:05  保存宽表结果至：./binaryclassify/eg//predictscore~202012/predict_data~202012~1.csv
+
+20220620-15:36:05  计算字段之间的相关性系数
+20220620-15:36:06  
+                       count    8128.0
+                       mean    0.174
+                       std    0.193
+                       min    0.0
+                       25%    0.052
+                       50%    0.103
+                       75%    0.217
+                       max    1.0
+                       dtype: float64
+
+
+                   ------------------------------- 计算宽表字段psi ------------------------------------ 
+                    
+                    20220620-15:36:06  my toolmodule.dataprep.PsiTransformer_DF transform
+                    20220620-15:36:06      开始时间：2022-06-20 15:36:06
+                    20220620-15:36:06      data in : (3412, 143)
+                    20220620-15:36:06      self已带有id_X属性 2267646353928
+                    20220620-15:36:06      首次从X获取id_X_new属性 2267623223984
+                    20220620-15:36:06      data in2: (3412, 137)
+                    20220620-15:36:06      对134个数值字段进行分箱：['innet_months', 'age_add', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_flow_roam', 'call_dura_roam', 'days_call_p_4', 'nos_calling', 'nos_calling_diff', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'avg__calling_diff_dura', 'avg__dinner_fee', 'avg__nos_calling', 'avg__call_use', 'avg__call_dura_roam', 'avg__gprs_flow_video', 'avg__calling_dura', 'avg__gprs_last_defer', 'avg__calling_diff_cnt', 'avg__gprs_resource', 'avg__calling_cnt', 'avg__nos_calling_diff', 'avg__gprs_now_defer', 'avg__gprs_flow_busy', 'avg__arpu', 'avg__monthsremain_last_stop_date', 'avg__gprs_flow_game', 'avg__gprs_now_rest', 'avg__gprs_flow_roam', 'sep__calling_diff_dura', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__gprs_flow_video', 'sep__calling_dura', 'sep__calling_diff_cnt', 'sep__calling_cnt', 'sep__gprs_flow_music', 'sep__monthsremain_last_stop_date', 'sep__gprs_now_rest', 'wave__gprs_flow_commu', 'wave__call_use', 'wave__gprs_flow_video', 'wave__gprs_last_defer', 'wave__gprs_flow_short', 'wave__gprs_flow_music', 'wave__gprs_now_defer', 'wave__gprs_now_rest', 'grow__dinner_fee', 'grow__call_use', 'grow__gprs_last_defer', 'grow__calling_diff_cnt', 'grow__calling_cnt', 'grow__gprs_flow_music', 'grow__gprs_now_defer', 'grow__gprs_flow_busy', 'grow__arpu', 'grow__gprs_flow_game', 'grow__gprs_now_rest', 'grow__gprs_flow_roam', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__nos_calling', 'max__call_use', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_dura', 'max__gprs_last_defer', 'max__calling_diff_cnt', 'max__gprs_flow_short', 'max__gprs_resource', 'max__calling_cnt', 'max__nos_calling_diff', 'max__gprs_flow_music', 'max__gprs_now_defer', 'max__gprs_flow_busy', 'max__arpu', 'max__gprs_now_rest', 'max__gprs_flow_roam', 'min__gprs_flow_commu', 'min__dinner_fee', 'min__call_use', 'min__gprs_flow_video', 'min__gprs_last_defer', 'min__gprs_flow_short', 'min__gprs_resource', 'min__gprs_flow_music', 'min__gprs_now_defer', 'min__gprs_flow_busy', 'min__arpu', 'min__gprs_now_rest', 'min__gprs_flow_roam', 'std__calling_diff_dura', 'std__gprs_flow_commu', 'std__dinner_fee', 'std__nos_calling', 'std__call_use', 'std__call_dura_roam', 'std__calling_dura', 'std__gprs_last_defer', 'std__calling_diff_cnt', 'std__gprs_resource', 'std__calling_cnt', 'std__nos_calling_diff', 'std__gprs_flow_busy', 'std__arpu', 'std__gprs_now_rest', 'std__gprs_flow_roam', 'more0cnt__nos_calling', 'more0cnt__calling_cnt', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__call_use', 'moreq25cnt__gprs_flow_video', 'moreq25cnt__calling_dura', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_resource', 'moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是']
+                    20220620-15:36:06      timedata_predict 计算稳定度（不区分正负例）：self.col_psi_all_
+                    20220620-15:36:17      data out: (3412, 137)
+                    20220620-15:36:17      transform轨迹：PsiTransformer_DF(Ncase='0', Pcase='1', bins=None, col_ignore=None, fit_pop_all=False, precision=6, , psi_limit=0.1, trans_na_error=True, warn_mark=' PsiTransformer')
+                    20220620-15:36:17      结束时间：2022-06-20 15:36:17 耗时(11s)
+20220620-15:36:17  保存Psi至：./binaryclassify/eg//predictscore~202012/predict_Psi~202010~202012~1.pkl
+20220620-15:36:17  保存dis_exam至：./binaryclassify/eg//predictscore~202012/predict_dis_exam~202012~1.pkl
+20220620-15:36:17  结束时间：2022-06-20 15:36:17
+20220620-15:36:17  耗时：18 s
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: stage取值为create时,r_limit, iv_limit参数无效，将被忽略
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer timedata_predict 计算稳定性(不区分正负例) ['account_id']字段多出2407个取值, .head(5):
+                      old  new
+field      value              
+account_id 101582294  NaN  1.0
+           101825777  NaN  1.0
+           101919658  NaN  1.0
+           102030526  NaN  1.0
+           102047603  NaN  1.0
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer timedata_predict 计算稳定性(不区分正负例)，8个字段稳定性>=psi_limit（0.1）：
+sep__monthsremain_last_stop_date    0.514245
+account_id                          0.406448
+grow__gprs_flow_busy                0.270124
+sep__gprs_flow_video                0.244029
+sep__gprs_flow_commu                0.211977
+grow__arpu                          0.166044
+wave__gprs_flow_commu               0.132767
+wave__gprs_flow_music               0.119847
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer data_predict X未带有y_carrier属性，不计算稳定度（区分正负例）
+  convert=self.convert_dtype,
+
+                   ###################################################################### 预测打分过程
+                    
+20220620-15:36:17  开始时间：2022-06-20 15:36:17
+20220620-15:36:17  模型名称：模型示例
+20220620-15:36:17  预测账期：202012
+20220620-15:36:17  提取模型结果: ratio_1_1 | pipeline2 | LGBMClassifier_DF - boosting_type='dart', objective='binary', num_leaves=511, learning_rate=0.1, colsample_bytree=0.8, subsample=0.6, subsample_freq=20
+20220620-15:36:17  模型 [宽带探索]~训练~测试 账期：~202010~202012
+20220620-15:36:17  最优模型的流水线不是pipeline1，为进行“top原因匹配”， 加载train_model_flows，从中获取pipeline1
+20220620-15:36:17      加载模型集合：./binaryclassify/eg/traintest~202010~202012/train_model_flows~202010~202012.pkl
+20220620-15:36:17      从train_model_flows中获取pipeline1
+20220620-15:36:17  建模时效果评估数据集：data_timeout
+
+20220620-15:36:17  ------------------------- 读取数据: ./binaryclassify/eg//predictscore~202012/predict_data~202012~1.csv 2022-06-20 15:36:17 -------------------------
+20220620-15:36:17      src: file
+20220620-15:36:17      condition: None
+20220620-15:36:17      col_need(134): ['acct_month', 'user_id', 'sms_cnt', 'call_fee_local', 'account_id', 'innet_months', 'age_add', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_flow_roam', 'call_dura_roam', 'nos_calling', 'nos_calling_diff', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'greatest_gprs_app', 'avg__calling_diff_dura', 'avg__dinner_fee', 'avg__nos_calling', 'avg__call_use', 'avg__call_dura_roam', 'avg__gprs_flow_video', 'avg__calling_dura', 'avg__gprs_last_defer', 'avg__calling_diff_cnt', 'avg__gprs_resource', 'avg__calling_cnt', 'avg__nos_calling_diff', 'avg__gprs_now_defer', 'avg__gprs_flow_busy', 'avg__arpu', 'avg__monthsremain_last_stop_date', 'avg__gprs_flow_game', 'avg__gprs_now_rest', 'avg__gprs_flow_roam', 'sep__calling_diff_dura', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__gprs_flow_video', 'sep__calling_dura', 'sep__calling_diff_cnt', 'sep__calling_cnt', 'sep__gprs_flow_music', 'sep__monthsremain_last_stop_date', 'sep__gprs_now_rest', 'wave__gprs_flow_commu', 'wave__call_use', 'wave__gprs_flow_video', 'wave__gprs_last_defer', 'wave__gprs_flow_short', 'wave__gprs_flow_music', 'wave__gprs_now_defer', 'wave__gprs_now_rest', 'grow__call_use', 'grow__gprs_last_defer', 'grow__calling_cnt', 'grow__gprs_flow_music', 'grow__gprs_now_defer', 'grow__gprs_flow_busy', 'grow__arpu', 'grow__gprs_flow_game', 'grow__gprs_now_rest', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__nos_calling', 'max__call_use', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_dura', 'max__gprs_last_defer', 'max__calling_diff_cnt', 'max__gprs_flow_short', 'max__gprs_resource', 'max__calling_cnt', 'max__nos_calling_diff', 'max__gprs_flow_music', 'max__gprs_now_defer', 'max__gprs_flow_busy', 'max__arpu', 'max__gprs_now_rest', 'max__gprs_flow_roam', 'min__gprs_flow_commu', 'min__dinner_fee', 'min__call_use', 'min__gprs_flow_video', 'min__gprs_last_defer', 'min__gprs_flow_short', 'min__gprs_resource', 'min__gprs_now_defer', 'min__gprs_flow_busy', 'min__arpu', 'min__gprs_now_rest', 'min__gprs_flow_roam', 'std__calling_diff_dura', 'std__gprs_flow_commu', 'std__dinner_fee', 'std__nos_calling', 'std__call_use', 'std__call_dura_roam', 'std__calling_dura', 'std__gprs_last_defer', 'std__calling_diff_cnt', 'std__gprs_resource', 'std__calling_cnt', 'std__nos_calling_diff', 'std__gprs_flow_busy', 'std__arpu', 'std__gprs_now_rest', 'std__gprs_flow_roam', 'more0cnt__nos_calling', 'more0cnt__calling_cnt', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__call_use', 'moreq25cnt__gprs_flow_video', 'moreq25cnt__calling_dura', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_resource', 'moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是']
+20220620-15:36:17      col_del: None
+20220620-15:36:17      col_char: None
+20220620-15:36:17      col_num: None
+20220620-15:36:17      col_date: None
+20220620-15:36:17      nrows: None
+20220620-15:36:17      if_coltolower: False
+20220620-15:36:17      kwargs: {}
+
+20220620-15:36:17      读取
+20220620-15:36:17  -------------------------读取完毕: (3412, 134) 2022-06-20 15:36:17 -------------------------
+
+20220620-15:36:17  补齐流水线删除的8个fit_in_colnames_字段
+20220620-15:36:17      数据量：(3412, 142)
+
+20220620-15:36:17  数据账期校验:
+20220620-15:36:17      通过
+
+20220620-15:36:17  最优模型 - pipeline2 - 数据转换
+20220620-15:36:17      从流水线中获取WoeTransformer_DF
+20220620-15:36:17      向WoeTransformer_DF.psi_.col_ignore补充流水线中删除的字段，不做稳定度检验（未读取，用np.nan填充）
+20220620-15:36:26      转换前shape：(3412, 142)
+20220620-15:36:26      转换后shape：(3412, 118)
+
+20220620-15:36:26  top原因匹配
+20220620-15:36:26      pipeline1 - 数据转换
+20220620-15:36:26      col_notcause：['acct_month', 'phone_no_null', 'user_id', 'account_id', 'last_stop_date']
+20220620-15:36:26      从流水线中获取WoeTransformer_DF
+20220620-15:36:26      向WoeTransformer_DF.psi_.col_ignore补充流水线中删除的字段，不做稳定度检验（未读取，用np.nan填充）
+
+20220620-15:36:26      数据分箱（union1） 2022-06-20 15:36:26
+20220620-15:36:28      转换前shape：(3412, 142)
+20220620-15:36:28      转换后shape：(3412, 130)
+
+20220620-15:36:28      woe转换 2022-06-20 15:36:28
+20220620-15:36:36      转换前shape：(3412, 130)
+20220620-15:36:36      转换后shape：(3412, 118)
+
+20220620-15:36:36      确定动因字段 2022-06-20 15:36:36
+20220620-15:36:36      剔除非动因字段（0个）：set()
+20220620-15:36:36      动因字段：118个
+
+20220620-15:36:36      计算动因字段的相关矩阵，删除高相关字段
+20220620-15:36:36      输入为相关性系数矩阵
+20220620-15:36:36      提取相关性超过0.8的字段
+20220620-15:36:36      需要删除50个高度相关字段: ['gprs_now_rest', 'grow__gprs_now_defer', 'max__calling_diff_cnt', 'max__gprs_flow_video', 'avg__calling_dura', 'more0cnt__calling_cnt', 'std__gprs_flow_commu', 'max__gprs_resource', 'calling_dura', 'moreq25cnt__gprs_flow_commu', 'avg__arpu', 'grow__call_use', 'calling_diff_cnt', 'sep__gprs_flow_music', 'avg__call_use', 'sep__calling_diff_dura', 'grow__calling_cnt', 'max__calling_diff_dura', 'max__gprs_last_defer', 'nos_calling', 'moreq25cnt__gprs_flow_short', 'avg__gprs_flow_roam', 'gprs_flow_busy', 'max__nos_calling', 'avg__call_dura_roam', 'max__nos_calling_diff', 'wave__gprs_flow_commu', 'avg__gprs_now_rest', 'grow__gprs_flow_music', 'max__gprs_now_defer', 'max__dinner_fee', 'moreq25cnt__gprs_flow_video', 'sep__call_use', 'calling_diff_dura', 'std__gprs_flow_busy', 'sep__calling_cnt', 'gprs_flow_short', 'avg__calling_diff_dura', 'min__gprs_flow_short', 'wave__gprs_flow_short', 'calling_cnt', 'avg__calling_cnt', 'max__call_dura_roam', 'gprs_flow_video', 'sep__gprs_flow_commu', 'min__gprs_flow_video', 'gprs_flow_commu', 'avg__nos_calling_diff', 'avg__gprs_last_defer', 'call_use']
+20220620-15:36:36      动因字段：68个
+
+20220620-15:36:36      从原因中删除用户量过小的 字段-取值
+20220620-15:36:36      阈值 valuecount_limit= 50
+20220620-15:36:36      将1个字段的1个取值（用户量<=50）从原因中剔除（对应的woe置为-999）
+
+20220620-15:36:36      原因排序 2022-06-20 15:36:36
+20220620-15:36:36      top1 2022-06-20 15:36:36
+20220620-15:36:36      top2 2022-06-20 15:36:36
+20220620-15:36:36      top3 2022-06-20 15:36:36
+20220620-15:36:37      排序结束 2022-06-20 15:36:37
+
+20220620-15:36:37      将woe<=woe_thred（0)的原因置空
+20220620-15:36:37      top1: 将23行woe<=woe_thred（0)的colname_top1, colcomment_top1, colvalue_top1, colwoe_top1置空
+20220620-15:36:37      top2: 将72行woe<=woe_thred（0)的colname_top2, colcomment_top2, colvalue_top2, colwoe_top2置空
+20220620-15:36:37      top3: 将134行woe<=woe_thred（0)的colname_top3, colcomment_top3, colvalue_top3, colwoe_top3置空
+
+
+20220620-15:36:37  模型预测
+
+20220620-15:36:37  匹配各分数档位查准率、提升度（非累计）
+
+20220620-15:36:37  概率得分描述统计：
+                                 score
+                       count  3412.000
+                       mean     44.517
+                       std      21.428
+                       min       6.001
+                       25%      27.530
+                       50%      40.361
+                       75%      58.506
+                       max      98.343
+
+20220620-15:36:37  概率得分分段统计：
+                                       用户量      占比
+                       (-0.001, 10.0]      27  0.007913
+                       (10.0, 20.0]       330  0.096717
+                       (20.0, 30.0]       654  0.191676
+                       (30.0, 40.0]       675  0.197831
+                       (40.0, 50.0]       535  0.156800
+                       (50.0, 60.0]       386  0.113130
+                       (60.0, 70.0]       296  0.086753
+                       (70.0, 80.0]       216  0.063306
+                       (80.0, 90.0]       181  0.053048
+                       (90.0, 100.0]      112  0.032825
+
+20220620-15:36:37  模型稳定度：0.01698
+
+20220620-15:36:37  结果数据展示：
+                          acct_month      user_id model_name  month_train  month_test   score  score_cut  precision lift  sms_cnt  call_fee_local          colname_top1              colcomment_top1 colvalue_top1  colwoe_top1           colname_top2            colcomment_top2    colvalue_top2  colwoe_top2         colname_top3                colcomment_top3    colvalue_top3  colwoe_top3
+                       0      202012  10004475614   模型示例       202010      202012  49.497          5       0.16  1.1      0.0             0.0        call_dura_roam                省际漫游-时长   (93.5, inf]     0.687105              max__arpu      当月arpu：近3月最大值    (36.875, inf]     0.570545     max__calling_cnt      主叫通话次数：近3月最大值      (38.5, inf]     0.510826
+                       8      202012  10019670804   模型示例       202010      202012  53.046          5       0.16  1.1      2.0             0.0  max__gprs_flow_commu  通信类应用流量：近3月最大值   (33.5, inf]     1.048668  grow__gprs_last_defer  流量滚存资源：近3月成长率  (0.141602, inf]     0.377589  grow__gprs_now_rest  当月gprs资源余量：近3月成长率  (1.000915, inf]     0.370374
+
+20220620-15:36:37  保存结果数据至：./binaryclassify/eg//predictscore~202012/predict_score_data~202010~202012~202012~1.csv
+20220620-15:36:37  保存数据处理流水线至：./binaryclassify/eg//predictscore~202012/predict_result~202010~202012~202012~1.pkl
+
+20220620-15:36:37  结束时间：2022-06-20 15:36:37
+20220620-15:36:37  耗时：20 s
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline2 PsiTransformer timedata_predict 计算稳定性(不区分正负例)，7个字段稳定性>=psi_limit（0.1）：
+sep__monthsremain_last_stop_date    0.514245
+grow__gprs_flow_busy                0.311683
+wave__gprs_flow_video               0.226047
+sep__gprs_flow_commu                0.211977
+grow__arpu                          0.166044
+wave__gprs_flow_short               0.157798
+grow__gprs_last_defer               0.121897
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline2 PsiTransformer data_predict X未带有y_carrier属性，不计算稳定度（区分正负例）
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline1 PsiTransformer time2 计算稳定性(不区分正负例)，7个字段稳定性>=psi_limit（0.1）：
+sep__monthsremain_last_stop_date    0.514245
+grow__gprs_flow_busy                0.311683
+wave__gprs_flow_video               0.226047
+sep__gprs_flow_commu                0.211977
+grow__arpu                          0.166044
+wave__gprs_flow_short               0.157798
+grow__gprs_last_defer               0.121897
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline1 PsiTransformer  X未带有y_carrier属性，不计算稳定度（区分正负例）
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead.  To get a de-fragmented frame, use `newframe = frame.copy()`
+  convert=self.convert_dtype,
+20220620-15:36:37  ==========================================================================================
+
+20220620-15:36:37  =========================================== 2份：['6', '7'] ==========================================
+20220620-15:36:37  修改Info，用于分批预测
+20220620-15:36:37  condition: right(cast(user_id as text), 1) in ('6', '7')
+                   table_predict:./binaryclassify/eg//predictscore~202012/predict_data~202012~2.csv
+                   table_score:./binaryclassify/eg//predictscore~202012/predict_score_data~202010~202012~202012~2.csv
+
+                   ###################################################################### 预测集加工
+                    
+20220620-15:36:37  开始时间：2022-06-20 15:36:37
+20220620-15:36:37  参数设置：
+                       Info.iv_limit: 0.05
+                       stage: create
+                       Info.model_name: 模型示例
+                       step: predict
+                       Info.auto_pair2: False
+                       table_in: kehujingyingbudb.mid_eg_recent_predict_202012
+                       Info.r_limit: 0.95
+
+20220620-15:36:40  ------------------------- 读取数据: kehujingyingbudb.mid_eg_recent_predict_202012 2022-06-20 15:36:40 -------------------------
+20220620-15:36:40      src: gp
+20220620-15:36:40      condition: right(cast(user_id as text), 1) in ('6', '7')
+20220620-15:36:40      col_need(33): ['user_acct_month', 'data_use', 'acct_month', 'user_id', 'account_id', 'innet_months', 'age_add', 'last_stop_date', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'if_nolimit', 'if_5g_dinner', 'arpu', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game']
+20220620-15:36:40      col_del: None
+20220620-15:36:40      col_char(7): ['user_acct_month', 'data_use', 'acct_month', 'user_id', 'account_id', 'if_nolimit', 'if_5g_dinner']
+20220620-15:36:40      col_num(25): ['innet_months', 'age_add', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'arpu', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game']
+20220620-15:36:40      col_date(1): ['last_stop_date']
+20220620-15:36:40      nrows: None
+20220620-15:36:40      if_coltolower: True
+20220620-15:36:40      kwargs: {}
+
+20220620-15:36:40      读取
+20220620-15:36:41      shape: (6905, 33)
+
+20220620-15:36:41  -------------------------读取完毕: (6905, 33) 2022-06-20 15:36:41 -------------------------
+
+20220620-15:36:41  手动衍生_py2个字段: {'monthsremain_last_stop_date': '最后停机时间：剩余时长', 'greatest_gprs_app': 'app偏好'}
+20220620-15:36:41  monthsremain_last_stop_date: last_stop_date - current_date
+20220620-15:36:41  greatest_gprs_app: {'gprs_flow_video': 'video', 'gprs_flow_short': 'short', 'gprs_flow_music': 'music', 'gprs_flow_commu': 'commu', 'gprs_flow_game': 'game'}
+20220620-15:36:43  数据量: (6905, 35)
+
+20220620-15:36:43  检查数据
+20220620-15:36:43  各账期数据量分布：
+                       202010  data_predict    2597
+                       202011  data_predict    1711
+                       202012  data_predict    2597
+                       dtype: int64
+20220620-15:36:43  各账期数据量不一致
+20220620-15:36:43  以nan填充缺少账期的记录
+20220620-15:36:43      修改后：
+                       202010  data_predict    2597
+                       202011  data_predict    2597
+                       202012  data_predict    2597
+                       dtype: int64)
+20220620-15:36:43  
+                   diff_limitweiNone,不考察近n月字段各账期取值分布, dis_exam返回None！
+
+
+20220620-15:36:43  填充数值型&类别型字段缺失值
+20220620-15:36:43  日期型字段缺失值情况：
+                       last_stop_date    886
+                       dtype: int64
+
+                   ----------------------------------------- 当月 类别型 onthot 
+
+                   ----------------------------------------- 当月 数值型&类别型 原始数据 
+20220620-15:36:43  (2597, 27)
+20220620-15:36:43  筛选衍生字段的 原始/手动衍生_sql 字段
+
+                   ----------------------------------------- 近n月 数值型 近3月均值 
+20220620-15:36:43  字段个数：19, 添加字段：None
+20220620-15:36:43  (2597, 46)
+
+                   ----------------------------------------- 近n月 数值型 近3月离散系数 
+20220620-15:36:43  字段个数：10, 添加字段：None
+20220620-15:36:43  (2597, 56)
+
+                   ----------------------------------------- 近n月 数值型 近3月波动性 
+20220620-15:36:43  字段个数：8, 添加字段：None
+20220620-15:36:43  (2597, 64)
+
+                   ----------------------------------------- 近n月 数值型 近3月成长率 
+20220620-15:36:43  字段个数：9, 添加字段：None
+20220620-15:36:43  (2597, 73)
+
+                   ----------------------------------------- 近n月 数值型 近3月最大值 
+20220620-15:36:43  字段个数：20, 添加字段：None
+20220620-15:36:43  (2597, 93)
+
+                   ----------------------------------------- 近n月 数值型 近3月最小值 
+20220620-15:36:43  字段个数：12, 添加字段：None
+20220620-15:36:43  (2597, 105)
+
+                   ----------------------------------------- 近n月 数值型 近3月标准差 
+20220620-15:36:43  字段个数：16, 添加字段：None
+20220620-15:36:43  (2597, 121)
+
+                   ----------------------------------------- 近n月 数值型 大于x的月份数 
+20220620-15:36:43  ('more0cnt', '近3月大于0的月份数')
+20220620-15:36:43  ('moreq25cnt', '近3月大于第一四分位数的月份数')
+20220620-15:36:43  (2597, 134)
+
+                   ----------------------------------------- 近n月 类别型 取某值的月份数 
+20220620-15:36:43  字段个数：2, 添加字段：None
+20220620-15:36:43  (2597, 136)
+
+                   ----------------------------------------- 汇总最终宽表 
+20220620-15:36:43  table.shape:(2597, 136)
+
+20220620-15:36:43  保存宽表结果至：./binaryclassify/eg//predictscore~202012/predict_data~202012~2.csv
+
+20220620-15:36:43  计算字段之间的相关性系数
+20220620-15:36:43  
+                       count    8128.0
+                       mean    0.178
+                       std    0.195
+                       min    0.0
+                       25%    0.046
+                       50%    0.11
+                       75%    0.233
+                       max    1.0
+                       dtype: float64
+
+
+                   ------------------------------- 计算宽表字段psi ------------------------------------ 
+                    
+                    20220620-15:36:43  my toolmodule.dataprep.PsiTransformer_DF transform
+                    20220620-15:36:43      开始时间：2022-06-20 15:36:43
+                    20220620-15:36:43      data in : (2597, 143)
+                    20220620-15:36:43      self已带有id_X属性 2267646353928
+                    20220620-15:36:43      首次从X获取id_X_new属性 2267616324296
+                    20220620-15:36:43      data in2: (2597, 137)
+                    20220620-15:36:43      对134个数值字段进行分箱：['innet_months', 'age_add', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_flow_roam', 'call_dura_roam', 'days_call_p_4', 'nos_calling', 'nos_calling_diff', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'avg__calling_diff_dura', 'avg__dinner_fee', 'avg__nos_calling', 'avg__call_use', 'avg__call_dura_roam', 'avg__gprs_flow_video', 'avg__calling_dura', 'avg__gprs_last_defer', 'avg__calling_diff_cnt', 'avg__gprs_resource', 'avg__calling_cnt', 'avg__nos_calling_diff', 'avg__gprs_now_defer', 'avg__gprs_flow_busy', 'avg__arpu', 'avg__monthsremain_last_stop_date', 'avg__gprs_flow_game', 'avg__gprs_now_rest', 'avg__gprs_flow_roam', 'sep__calling_diff_dura', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__gprs_flow_video', 'sep__calling_dura', 'sep__calling_diff_cnt', 'sep__calling_cnt', 'sep__gprs_flow_music', 'sep__monthsremain_last_stop_date', 'sep__gprs_now_rest', 'wave__gprs_flow_commu', 'wave__call_use', 'wave__gprs_flow_video', 'wave__gprs_last_defer', 'wave__gprs_flow_short', 'wave__gprs_flow_music', 'wave__gprs_now_defer', 'wave__gprs_now_rest', 'grow__dinner_fee', 'grow__call_use', 'grow__gprs_last_defer', 'grow__calling_diff_cnt', 'grow__calling_cnt', 'grow__gprs_flow_music', 'grow__gprs_now_defer', 'grow__gprs_flow_busy', 'grow__arpu', 'grow__gprs_flow_game', 'grow__gprs_now_rest', 'grow__gprs_flow_roam', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__nos_calling', 'max__call_use', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_dura', 'max__gprs_last_defer', 'max__calling_diff_cnt', 'max__gprs_flow_short', 'max__gprs_resource', 'max__calling_cnt', 'max__nos_calling_diff', 'max__gprs_flow_music', 'max__gprs_now_defer', 'max__gprs_flow_busy', 'max__arpu', 'max__gprs_now_rest', 'max__gprs_flow_roam', 'min__gprs_flow_commu', 'min__dinner_fee', 'min__call_use', 'min__gprs_flow_video', 'min__gprs_last_defer', 'min__gprs_flow_short', 'min__gprs_resource', 'min__gprs_flow_music', 'min__gprs_now_defer', 'min__gprs_flow_busy', 'min__arpu', 'min__gprs_now_rest', 'min__gprs_flow_roam', 'std__calling_diff_dura', 'std__gprs_flow_commu', 'std__dinner_fee', 'std__nos_calling', 'std__call_use', 'std__call_dura_roam', 'std__calling_dura', 'std__gprs_last_defer', 'std__calling_diff_cnt', 'std__gprs_resource', 'std__calling_cnt', 'std__nos_calling_diff', 'std__gprs_flow_busy', 'std__arpu', 'std__gprs_now_rest', 'std__gprs_flow_roam', 'more0cnt__nos_calling', 'more0cnt__calling_cnt', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__call_use', 'moreq25cnt__gprs_flow_video', 'moreq25cnt__calling_dura', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_resource', 'moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是']
+                    20220620-15:36:44      timedata_predict 计算稳定度（不区分正负例）：self.col_psi_all_
+                    20220620-15:36:55      data out: (2597, 137)
+                    20220620-15:36:55      transform轨迹：PsiTransformer_DF(Ncase='0', Pcase='1', bins=None, col_ignore=None, fit_pop_all=False, precision=6, , psi_limit=0.1, trans_na_error=True, warn_mark=' PsiTransformer')
+                    20220620-15:36:55      结束时间：2022-06-20 15:36:55 耗时(11s)
+20220620-15:36:55  保存Psi至：./binaryclassify/eg//predictscore~202012/predict_Psi~202010~202012~2.pkl
+20220620-15:36:55  保存dis_exam至：./binaryclassify/eg//predictscore~202012/predict_dis_exam~202012~2.pkl
+20220620-15:36:55  结束时间：2022-06-20 15:36:55
+20220620-15:36:55  耗时：17 s
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: stage取值为create时,r_limit, iv_limit参数无效，将被忽略
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer timedata_predict 计算稳定性(不区分正负例) ['account_id']字段多出1860个取值, .head(5):
+                      old  new
+field      value              
+account_id 101819657  NaN  1.0
+           101923773  NaN  1.0
+           101975204  NaN  1.0
+           101986492  NaN  1.0
+           101992504  NaN  1.0
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer timedata_predict 计算稳定性(不区分正负例)，11个字段稳定性>=psi_limit（0.1）：
+grow__gprs_now_rest                 1.784879
+sep__monthsremain_last_stop_date    0.530918
+grow__gprs_now_defer                0.344974
+account_id                          0.277759
+sep__gprs_flow_video                0.276255
+grow__arpu                          0.220690
+sep__gprs_flow_commu                0.207771
+grow__gprs_last_defer               0.161683
+wave__gprs_flow_commu               0.139905
+wave__gprs_flow_music               0.128284
+wave__gprs_flow_video               0.120389
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer data_predict X未带有y_carrier属性，不计算稳定度（区分正负例）
+  convert=self.convert_dtype,
+
+                   ###################################################################### 预测打分过程
+                    
+20220620-15:36:55  开始时间：2022-06-20 15:36:55
+20220620-15:36:55  模型名称：模型示例
+20220620-15:36:55  预测账期：202012
+20220620-15:36:55  提取模型结果: ratio_1_1 | pipeline2 | LGBMClassifier_DF - boosting_type='dart', objective='binary', num_leaves=511, learning_rate=0.1, colsample_bytree=0.8, subsample=0.6, subsample_freq=20
+20220620-15:36:55  模型 [宽带探索]~训练~测试 账期：~202010~202012
+20220620-15:36:55  最优模型的流水线不是pipeline1，为进行“top原因匹配”， 加载train_model_flows，从中获取pipeline1
+20220620-15:36:55      加载模型集合：./binaryclassify/eg/traintest~202010~202012/train_model_flows~202010~202012.pkl
+20220620-15:36:55      从train_model_flows中获取pipeline1
+20220620-15:36:55  建模时效果评估数据集：data_timeout
+
+20220620-15:36:55  ------------------------- 读取数据: ./binaryclassify/eg//predictscore~202012/predict_data~202012~2.csv 2022-06-20 15:36:55 -------------------------
+20220620-15:36:55      src: file
+20220620-15:36:55      condition: None
+20220620-15:36:55      col_need(134): ['acct_month', 'user_id', 'sms_cnt', 'call_fee_local', 'account_id', 'innet_months', 'age_add', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_flow_roam', 'call_dura_roam', 'nos_calling', 'nos_calling_diff', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'greatest_gprs_app', 'avg__calling_diff_dura', 'avg__dinner_fee', 'avg__nos_calling', 'avg__call_use', 'avg__call_dura_roam', 'avg__gprs_flow_video', 'avg__calling_dura', 'avg__gprs_last_defer', 'avg__calling_diff_cnt', 'avg__gprs_resource', 'avg__calling_cnt', 'avg__nos_calling_diff', 'avg__gprs_now_defer', 'avg__gprs_flow_busy', 'avg__arpu', 'avg__monthsremain_last_stop_date', 'avg__gprs_flow_game', 'avg__gprs_now_rest', 'avg__gprs_flow_roam', 'sep__calling_diff_dura', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__gprs_flow_video', 'sep__calling_dura', 'sep__calling_diff_cnt', 'sep__calling_cnt', 'sep__gprs_flow_music', 'sep__monthsremain_last_stop_date', 'sep__gprs_now_rest', 'wave__gprs_flow_commu', 'wave__call_use', 'wave__gprs_flow_video', 'wave__gprs_last_defer', 'wave__gprs_flow_short', 'wave__gprs_flow_music', 'wave__gprs_now_defer', 'wave__gprs_now_rest', 'grow__call_use', 'grow__gprs_last_defer', 'grow__calling_cnt', 'grow__gprs_flow_music', 'grow__gprs_now_defer', 'grow__gprs_flow_busy', 'grow__arpu', 'grow__gprs_flow_game', 'grow__gprs_now_rest', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__nos_calling', 'max__call_use', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_dura', 'max__gprs_last_defer', 'max__calling_diff_cnt', 'max__gprs_flow_short', 'max__gprs_resource', 'max__calling_cnt', 'max__nos_calling_diff', 'max__gprs_flow_music', 'max__gprs_now_defer', 'max__gprs_flow_busy', 'max__arpu', 'max__gprs_now_rest', 'max__gprs_flow_roam', 'min__gprs_flow_commu', 'min__dinner_fee', 'min__call_use', 'min__gprs_flow_video', 'min__gprs_last_defer', 'min__gprs_flow_short', 'min__gprs_resource', 'min__gprs_now_defer', 'min__gprs_flow_busy', 'min__arpu', 'min__gprs_now_rest', 'min__gprs_flow_roam', 'std__calling_diff_dura', 'std__gprs_flow_commu', 'std__dinner_fee', 'std__nos_calling', 'std__call_use', 'std__call_dura_roam', 'std__calling_dura', 'std__gprs_last_defer', 'std__calling_diff_cnt', 'std__gprs_resource', 'std__calling_cnt', 'std__nos_calling_diff', 'std__gprs_flow_busy', 'std__arpu', 'std__gprs_now_rest', 'std__gprs_flow_roam', 'more0cnt__nos_calling', 'more0cnt__calling_cnt', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__call_use', 'moreq25cnt__gprs_flow_video', 'moreq25cnt__calling_dura', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_resource', 'moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是']
+20220620-15:36:55      col_del: None
+20220620-15:36:55      col_char: None
+20220620-15:36:55      col_num: None
+20220620-15:36:55      col_date: None
+20220620-15:36:55      nrows: None
+20220620-15:36:55      if_coltolower: False
+20220620-15:36:55      kwargs: {}
+
+20220620-15:36:55      读取
+20220620-15:36:55  -------------------------读取完毕: (2597, 134) 2022-06-20 15:36:55 -------------------------
+
+20220620-15:36:55  补齐流水线删除的8个fit_in_colnames_字段
+20220620-15:36:55      数据量：(2597, 142)
+
+20220620-15:36:55  数据账期校验:
+20220620-15:36:55      通过
+
+20220620-15:36:55  最优模型 - pipeline2 - 数据转换
+20220620-15:36:55      从流水线中获取WoeTransformer_DF
+20220620-15:36:55      向WoeTransformer_DF.psi_.col_ignore补充流水线中删除的字段，不做稳定度检验（未读取，用np.nan填充）
+20220620-15:37:04      转换前shape：(2597, 142)
+20220620-15:37:04      转换后shape：(2597, 118)
+
+20220620-15:37:04  top原因匹配
+20220620-15:37:04      pipeline1 - 数据转换
+20220620-15:37:04      col_notcause：['acct_month', 'phone_no_null', 'user_id', 'account_id', 'last_stop_date']
+20220620-15:37:04      从流水线中获取WoeTransformer_DF
+20220620-15:37:04      向WoeTransformer_DF.psi_.col_ignore补充流水线中删除的字段，不做稳定度检验（未读取，用np.nan填充）
+
+20220620-15:37:04      数据分箱（union1） 2022-06-20 15:37:04
+20220620-15:37:05      转换前shape：(2597, 142)
+20220620-15:37:05      转换后shape：(2597, 130)
+
+20220620-15:37:05      woe转换 2022-06-20 15:37:05
+20220620-15:37:13      转换前shape：(2597, 130)
+20220620-15:37:13      转换后shape：(2597, 118)
+
+20220620-15:37:13      确定动因字段 2022-06-20 15:37:13
+20220620-15:37:13      剔除非动因字段（0个）：set()
+20220620-15:37:13      动因字段：118个
+
+20220620-15:37:13      计算动因字段的相关矩阵，删除高相关字段
+20220620-15:37:13      输入为相关性系数矩阵
+20220620-15:37:13      提取相关性超过0.8的字段
+20220620-15:37:13      需要删除50个高度相关字段: ['gprs_now_rest', 'grow__gprs_now_defer', 'max__calling_diff_cnt', 'max__gprs_flow_video', 'avg__calling_dura', 'more0cnt__calling_cnt', 'std__gprs_flow_commu', 'max__gprs_resource', 'calling_dura', 'moreq25cnt__gprs_flow_commu', 'avg__arpu', 'grow__call_use', 'calling_diff_cnt', 'sep__gprs_flow_music', 'avg__call_use', 'sep__calling_diff_dura', 'grow__calling_cnt', 'max__calling_diff_dura', 'max__gprs_last_defer', 'nos_calling', 'moreq25cnt__gprs_flow_short', 'avg__gprs_flow_roam', 'gprs_flow_busy', 'max__nos_calling', 'avg__call_dura_roam', 'max__nos_calling_diff', 'wave__gprs_flow_commu', 'avg__gprs_now_rest', 'grow__gprs_flow_music', 'max__gprs_now_defer', 'max__dinner_fee', 'moreq25cnt__gprs_flow_video', 'sep__call_use', 'calling_diff_dura', 'std__gprs_flow_busy', 'sep__calling_cnt', 'gprs_flow_short', 'avg__calling_diff_dura', 'min__gprs_flow_short', 'wave__gprs_flow_short', 'calling_cnt', 'avg__calling_cnt', 'max__call_dura_roam', 'gprs_flow_video', 'sep__gprs_flow_commu', 'min__gprs_flow_video', 'gprs_flow_commu', 'avg__nos_calling_diff', 'avg__gprs_last_defer', 'call_use']
+20220620-15:37:13      动因字段：68个
+
+20220620-15:37:13      从原因中删除用户量过小的 字段-取值
+20220620-15:37:13      阈值 valuecount_limit= 50
+20220620-15:37:13      将1个字段的1个取值（用户量<=50）从原因中剔除（对应的woe置为-999）
+
+20220620-15:37:13      原因排序 2022-06-20 15:37:13
+20220620-15:37:13      top1 2022-06-20 15:37:13
+20220620-15:37:13      top2 2022-06-20 15:37:13
+20220620-15:37:13      top3 2022-06-20 15:37:13
+20220620-15:37:14      排序结束 2022-06-20 15:37:14
+
+20220620-15:37:14      将woe<=woe_thred（0)的原因置空
+20220620-15:37:14      top1: colwoe_top1字段最小值0.215 > woe_thred（0）,无需处理
+20220620-15:37:14      top2: 将29行woe<=woe_thred（0)的colname_top2, colcomment_top2, colvalue_top2, colwoe_top2置空
+20220620-15:37:14      top3: 将91行woe<=woe_thred（0)的colname_top3, colcomment_top3, colvalue_top3, colwoe_top3置空
+
+
+20220620-15:37:14  模型预测
+
+20220620-15:37:14  匹配各分数档位查准率、提升度（非累计）
+
+20220620-15:37:14  概率得分描述统计：
+                                 score
+                       count  2597.000
+                       mean     44.471
+                       std      20.517
+                       min       7.023
+                       25%      28.628
+                       50%      40.218
+                       75%      57.062
+                       max      97.295
+
+20220620-15:37:14  概率得分分段统计：
+                                       用户量      占比
+                       (-0.001, 10.0]       9  0.003466
+                       (10.0, 20.0]       211  0.081248
+                       (20.0, 30.0]       487  0.187524
+                       (30.0, 40.0]       582  0.224105
+                       (40.0, 50.0]       420  0.161725
+                       (50.0, 60.0]       316  0.121679
+                       (60.0, 70.0]       205  0.078937
+                       (70.0, 80.0]       168  0.064690
+                       (80.0, 90.0]       119  0.045822
+                       (90.0, 100.0]       80  0.030805
+
+20220620-15:37:14  模型稳定度：0.0494
+
+20220620-15:37:14  结果数据展示：
+                           acct_month      user_id model_name  month_train  month_test   score  score_cut  precision lift  sms_cnt  call_fee_local         colname_top1                colcomment_top1         colvalue_top1  colwoe_top1                      colname_top2                                  colcomment_top2     colvalue_top2  colwoe_top2          colname_top3              colcomment_top3    colvalue_top3  colwoe_top3
+                       0       202012  10008729856   模型示例       202010      202012  20.780         10       0.05  0.3      1.0             0.0  grow__gprs_now_rest  当月gprs资源余量：近3月成长率  (0.126128, 0.988813]      0.83107         moreq25cnt__gprs_resource  gprs国内资源总量：近3月大于第一四分位数的月份数        (1.5, inf]     0.172185               age_add         table_a_add测试字段1     (-inf, 48.5]     0.137959
+                       17      202012  10055816947   模型示例       202010      202012  20.911         10       0.05  0.3      0.0             0.0  grow__gprs_now_rest  当月gprs资源余量：近3月成长率  (0.126128, 0.988813]      0.83107  avg__monthsremain_last_stop_date                最后停机时间：剩余时长：近3月均值  (-2.166667, inf]     0.325020  grow__gprs_flow_busy  gprs-忙时-流量：近3月成长率  (0.803008, inf]     0.318956
+
+20220620-15:37:14  保存结果数据至：./binaryclassify/eg//predictscore~202012/predict_score_data~202010~202012~202012~2.csv
+20220620-15:37:14  保存数据处理流水线至：./binaryclassify/eg//predictscore~202012/predict_result~202010~202012~202012~2.pkl
+
+20220620-15:37:14  结束时间：2022-06-20 15:37:14
+20220620-15:37:14  耗时：19 s
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline2 PsiTransformer timedata_predict 计算稳定性(不区分正负例)，8个字段稳定性>=psi_limit（0.1）：
+grow__gprs_now_rest                 1.746500
+grow__gprs_last_defer               0.747089
+sep__monthsremain_last_stop_date    0.530918
+grow__gprs_now_defer                0.367436
+wave__gprs_flow_video               0.259327
+grow__arpu                          0.220690
+sep__gprs_flow_commu                0.207771
+wave__gprs_flow_short               0.161926
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline2 PsiTransformer data_predict X未带有y_carrier属性，不计算稳定度（区分正负例）
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline1 PsiTransformer time2 计算稳定性(不区分正负例)，8个字段稳定性>=psi_limit（0.1）：
+grow__gprs_now_rest                 1.729735
+grow__gprs_last_defer               0.747089
+sep__monthsremain_last_stop_date    0.530918
+grow__gprs_now_defer                0.367436
+wave__gprs_flow_video               0.259327
+grow__arpu                          0.220690
+sep__gprs_flow_commu                0.207771
+wave__gprs_flow_short               0.161926
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline1 PsiTransformer  X未带有y_carrier属性，不计算稳定度（区分正负例）
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead.  To get a de-fragmented frame, use `newframe = frame.copy()`
+  convert=self.convert_dtype,
+20220620-15:37:14  ==========================================================================================
+
+20220620-15:37:14  =========================================== 3份：['8', '9'] ==========================================
+20220620-15:37:14  修改Info，用于分批预测
+20220620-15:37:14  condition: right(cast(user_id as text), 1) in ('8', '9')
+                   table_predict:./binaryclassify/eg//predictscore~202012/predict_data~202012~3.csv
+                   table_score:./binaryclassify/eg//predictscore~202012/predict_score_data~202010~202012~202012~3.csv
+
+                   ###################################################################### 预测集加工
+                    
+20220620-15:37:14  开始时间：2022-06-20 15:37:14
+20220620-15:37:14  参数设置：
+                       Info.iv_limit: 0.05
+                       stage: create
+                       Info.model_name: 模型示例
+                       step: predict
+                       Info.auto_pair2: False
+                       table_in: kehujingyingbudb.mid_eg_recent_predict_202012
+                       Info.r_limit: 0.95
+
+20220620-15:37:17  ------------------------- 读取数据: kehujingyingbudb.mid_eg_recent_predict_202012 2022-06-20 15:37:17 -------------------------
+20220620-15:37:17      src: gp
+20220620-15:37:17      condition: right(cast(user_id as text), 1) in ('8', '9')
+20220620-15:37:17      col_need(33): ['user_acct_month', 'data_use', 'acct_month', 'user_id', 'account_id', 'innet_months', 'age_add', 'last_stop_date', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'if_nolimit', 'if_5g_dinner', 'arpu', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game']
+20220620-15:37:17      col_del: None
+20220620-15:37:17      col_char(7): ['user_acct_month', 'data_use', 'acct_month', 'user_id', 'account_id', 'if_nolimit', 'if_5g_dinner']
+20220620-15:37:17      col_num(25): ['innet_months', 'age_add', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'arpu', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game']
+20220620-15:37:17      col_date(1): ['last_stop_date']
+20220620-15:37:17      nrows: None
+20220620-15:37:17      if_coltolower: True
+20220620-15:37:17      kwargs: {}
+
+20220620-15:37:17      读取
+20220620-15:37:18      shape: (6942, 33)
+
+20220620-15:37:18  -------------------------读取完毕: (6942, 33) 2022-06-20 15:37:18 -------------------------
+
+20220620-15:37:18  手动衍生_py2个字段: {'monthsremain_last_stop_date': '最后停机时间：剩余时长', 'greatest_gprs_app': 'app偏好'}
+20220620-15:37:18  monthsremain_last_stop_date: last_stop_date - current_date
+20220620-15:37:18  greatest_gprs_app: {'gprs_flow_video': 'video', 'gprs_flow_short': 'short', 'gprs_flow_music': 'music', 'gprs_flow_commu': 'commu', 'gprs_flow_game': 'game'}
+20220620-15:37:20  数据量: (6942, 35)
+
+20220620-15:37:20  检查数据
+20220620-15:37:20  各账期数据量分布：
+                       202010  data_predict    2607
+                       202011  data_predict    1728
+                       202012  data_predict    2607
+                       dtype: int64
+20220620-15:37:20  各账期数据量不一致
+20220620-15:37:20  以nan填充缺少账期的记录
+20220620-15:37:20      修改后：
+                       202010  data_predict    2607
+                       202011  data_predict    2607
+                       202012  data_predict    2607
+                       dtype: int64)
+20220620-15:37:20  
+                   diff_limitweiNone,不考察近n月字段各账期取值分布, dis_exam返回None！
+
+
+20220620-15:37:20  填充数值型&类别型字段缺失值
+20220620-15:37:20  日期型字段缺失值情况：
+                       last_stop_date    879
+                       dtype: int64
+
+                   ----------------------------------------- 当月 类别型 onthot 
+
+                   ----------------------------------------- 当月 数值型&类别型 原始数据 
+20220620-15:37:20  (2607, 27)
+20220620-15:37:20  筛选衍生字段的 原始/手动衍生_sql 字段
+
+                   ----------------------------------------- 近n月 数值型 近3月均值 
+20220620-15:37:20  字段个数：19, 添加字段：None
+20220620-15:37:20  (2607, 46)
+
+                   ----------------------------------------- 近n月 数值型 近3月离散系数 
+20220620-15:37:20  字段个数：10, 添加字段：None
+20220620-15:37:20  (2607, 56)
+
+                   ----------------------------------------- 近n月 数值型 近3月波动性 
+20220620-15:37:20  字段个数：8, 添加字段：None
+20220620-15:37:20  (2607, 64)
+
+                   ----------------------------------------- 近n月 数值型 近3月成长率 
+20220620-15:37:20  字段个数：9, 添加字段：None
+20220620-15:37:20  (2607, 73)
+
+                   ----------------------------------------- 近n月 数值型 近3月最大值 
+20220620-15:37:20  字段个数：20, 添加字段：None
+20220620-15:37:20  (2607, 93)
+
+                   ----------------------------------------- 近n月 数值型 近3月最小值 
+20220620-15:37:20  字段个数：12, 添加字段：None
+20220620-15:37:20  (2607, 105)
+
+                   ----------------------------------------- 近n月 数值型 近3月标准差 
+20220620-15:37:20  字段个数：16, 添加字段：None
+20220620-15:37:20  (2607, 121)
+
+                   ----------------------------------------- 近n月 数值型 大于x的月份数 
+20220620-15:37:20  ('more0cnt', '近3月大于0的月份数')
+20220620-15:37:20  ('moreq25cnt', '近3月大于第一四分位数的月份数')
+20220620-15:37:20  (2607, 134)
+
+                   ----------------------------------------- 近n月 类别型 取某值的月份数 
+20220620-15:37:20  字段个数：2, 添加字段：None
+20220620-15:37:20  (2607, 136)
+
+                   ----------------------------------------- 汇总最终宽表 
+20220620-15:37:20  table.shape:(2607, 136)
+
+20220620-15:37:20  保存宽表结果至：./binaryclassify/eg//predictscore~202012/predict_data~202012~3.csv
+
+20220620-15:37:20  计算字段之间的相关性系数
+20220620-15:37:21  
+                       count    8128.0
+                       mean    0.184
+                       std    0.193
+                       min    0.0
+                       25%    0.059
+                       50%    0.121
+                       75%    0.227
+                       max    1.0
+                       dtype: float64
+
+
+                   ------------------------------- 计算宽表字段psi ------------------------------------ 
+                    
+                    20220620-15:37:21  my toolmodule.dataprep.PsiTransformer_DF transform
+                    20220620-15:37:21      开始时间：2022-06-20 15:37:21
+                    20220620-15:37:21      data in : (2607, 143)
+                    20220620-15:37:21      self已带有id_X属性 2267646353928
+                    20220620-15:37:21      首次从X获取id_X_new属性 2267499367672
+                    20220620-15:37:21      data in2: (2607, 137)
+                    20220620-15:37:21      对134个数值字段进行分箱：['innet_months', 'age_add', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_flow_roam', 'call_dura_roam', 'days_call_p_4', 'nos_calling', 'nos_calling_diff', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'avg__calling_diff_dura', 'avg__dinner_fee', 'avg__nos_calling', 'avg__call_use', 'avg__call_dura_roam', 'avg__gprs_flow_video', 'avg__calling_dura', 'avg__gprs_last_defer', 'avg__calling_diff_cnt', 'avg__gprs_resource', 'avg__calling_cnt', 'avg__nos_calling_diff', 'avg__gprs_now_defer', 'avg__gprs_flow_busy', 'avg__arpu', 'avg__monthsremain_last_stop_date', 'avg__gprs_flow_game', 'avg__gprs_now_rest', 'avg__gprs_flow_roam', 'sep__calling_diff_dura', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__gprs_flow_video', 'sep__calling_dura', 'sep__calling_diff_cnt', 'sep__calling_cnt', 'sep__gprs_flow_music', 'sep__monthsremain_last_stop_date', 'sep__gprs_now_rest', 'wave__gprs_flow_commu', 'wave__call_use', 'wave__gprs_flow_video', 'wave__gprs_last_defer', 'wave__gprs_flow_short', 'wave__gprs_flow_music', 'wave__gprs_now_defer', 'wave__gprs_now_rest', 'grow__dinner_fee', 'grow__call_use', 'grow__gprs_last_defer', 'grow__calling_diff_cnt', 'grow__calling_cnt', 'grow__gprs_flow_music', 'grow__gprs_now_defer', 'grow__gprs_flow_busy', 'grow__arpu', 'grow__gprs_flow_game', 'grow__gprs_now_rest', 'grow__gprs_flow_roam', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__nos_calling', 'max__call_use', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_dura', 'max__gprs_last_defer', 'max__calling_diff_cnt', 'max__gprs_flow_short', 'max__gprs_resource', 'max__calling_cnt', 'max__nos_calling_diff', 'max__gprs_flow_music', 'max__gprs_now_defer', 'max__gprs_flow_busy', 'max__arpu', 'max__gprs_now_rest', 'max__gprs_flow_roam', 'min__gprs_flow_commu', 'min__dinner_fee', 'min__call_use', 'min__gprs_flow_video', 'min__gprs_last_defer', 'min__gprs_flow_short', 'min__gprs_resource', 'min__gprs_flow_music', 'min__gprs_now_defer', 'min__gprs_flow_busy', 'min__arpu', 'min__gprs_now_rest', 'min__gprs_flow_roam', 'std__calling_diff_dura', 'std__gprs_flow_commu', 'std__dinner_fee', 'std__nos_calling', 'std__call_use', 'std__call_dura_roam', 'std__calling_dura', 'std__gprs_last_defer', 'std__calling_diff_cnt', 'std__gprs_resource', 'std__calling_cnt', 'std__nos_calling_diff', 'std__gprs_flow_busy', 'std__arpu', 'std__gprs_now_rest', 'std__gprs_flow_roam', 'more0cnt__nos_calling', 'more0cnt__calling_cnt', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__call_use', 'moreq25cnt__gprs_flow_video', 'moreq25cnt__calling_dura', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_resource', 'moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是']
+                    20220620-15:37:21      timedata_predict 计算稳定度（不区分正负例）：self.col_psi_all_
+                    20220620-15:37:32      data out: (2607, 137)
+                    20220620-15:37:32      transform轨迹：PsiTransformer_DF(Ncase='0', Pcase='1', bins=None, col_ignore=None, fit_pop_all=False, precision=6, , psi_limit=0.1, trans_na_error=True, warn_mark=' PsiTransformer')
+                    20220620-15:37:32      结束时间：2022-06-20 15:37:32 耗时(11s)
+20220620-15:37:32  保存Psi至：./binaryclassify/eg//predictscore~202012/predict_Psi~202010~202012~3.pkl
+20220620-15:37:32  保存dis_exam至：./binaryclassify/eg//predictscore~202012/predict_dis_exam~202012~3.pkl
+20220620-15:37:32  结束时间：2022-06-20 15:37:32
+20220620-15:37:32  耗时：17 s
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: stage取值为create时,r_limit, iv_limit参数无效，将被忽略
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer timedata_predict 计算稳定性(不区分正负例) ['account_id']字段多出1949个取值, .head(5):
+                      old  new
+field      value              
+account_id 101872652  NaN  1.0
+           101975450  NaN  1.0
+           102154765  NaN  1.0
+           102156412  NaN  1.0
+           102179084  NaN  1.0
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer timedata_predict 计算稳定性(不区分正负例)，12个字段稳定性>=psi_limit（0.1）：
+grow__gprs_now_rest                 1.004280
+sep__monthsremain_last_stop_date    0.617580
+grow__gprs_now_defer                0.296688
+sep__gprs_flow_video                0.284478
+account_id                          0.223437
+sep__gprs_flow_commu                0.212799
+grow__gprs_flow_busy                0.176921
+grow__call_use                      0.158956
+wave__gprs_flow_commu               0.141882
+wave__gprs_flow_music               0.130506
+wave__gprs_flow_video               0.117685
+wave__gprs_flow_short               0.103361
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer data_predict X未带有y_carrier属性，不计算稳定度（区分正负例）
+  convert=self.convert_dtype,
+
+                   ###################################################################### 预测打分过程
+                    
+20220620-15:37:32  开始时间：2022-06-20 15:37:32
+20220620-15:37:32  模型名称：模型示例
+20220620-15:37:32  预测账期：202012
+20220620-15:37:32  提取模型结果: ratio_1_1 | pipeline2 | LGBMClassifier_DF - boosting_type='dart', objective='binary', num_leaves=511, learning_rate=0.1, colsample_bytree=0.8, subsample=0.6, subsample_freq=20
+20220620-15:37:32  模型 [宽带探索]~训练~测试 账期：~202010~202012
+20220620-15:37:32  最优模型的流水线不是pipeline1，为进行“top原因匹配”， 加载train_model_flows，从中获取pipeline1
+20220620-15:37:32      加载模型集合：./binaryclassify/eg/traintest~202010~202012/train_model_flows~202010~202012.pkl
+20220620-15:37:32      从train_model_flows中获取pipeline1
+20220620-15:37:32  建模时效果评估数据集：data_timeout
+
+20220620-15:37:32  ------------------------- 读取数据: ./binaryclassify/eg//predictscore~202012/predict_data~202012~3.csv 2022-06-20 15:37:32 -------------------------
+20220620-15:37:32      src: file
+20220620-15:37:32      condition: None
+20220620-15:37:32      col_need(134): ['acct_month', 'user_id', 'sms_cnt', 'call_fee_local', 'account_id', 'innet_months', 'age_add', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_flow_roam', 'call_dura_roam', 'nos_calling', 'nos_calling_diff', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'greatest_gprs_app', 'avg__calling_diff_dura', 'avg__dinner_fee', 'avg__nos_calling', 'avg__call_use', 'avg__call_dura_roam', 'avg__gprs_flow_video', 'avg__calling_dura', 'avg__gprs_last_defer', 'avg__calling_diff_cnt', 'avg__gprs_resource', 'avg__calling_cnt', 'avg__nos_calling_diff', 'avg__gprs_now_defer', 'avg__gprs_flow_busy', 'avg__arpu', 'avg__monthsremain_last_stop_date', 'avg__gprs_flow_game', 'avg__gprs_now_rest', 'avg__gprs_flow_roam', 'sep__calling_diff_dura', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__gprs_flow_video', 'sep__calling_dura', 'sep__calling_diff_cnt', 'sep__calling_cnt', 'sep__gprs_flow_music', 'sep__monthsremain_last_stop_date', 'sep__gprs_now_rest', 'wave__gprs_flow_commu', 'wave__call_use', 'wave__gprs_flow_video', 'wave__gprs_last_defer', 'wave__gprs_flow_short', 'wave__gprs_flow_music', 'wave__gprs_now_defer', 'wave__gprs_now_rest', 'grow__call_use', 'grow__gprs_last_defer', 'grow__calling_cnt', 'grow__gprs_flow_music', 'grow__gprs_now_defer', 'grow__gprs_flow_busy', 'grow__arpu', 'grow__gprs_flow_game', 'grow__gprs_now_rest', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__nos_calling', 'max__call_use', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_dura', 'max__gprs_last_defer', 'max__calling_diff_cnt', 'max__gprs_flow_short', 'max__gprs_resource', 'max__calling_cnt', 'max__nos_calling_diff', 'max__gprs_flow_music', 'max__gprs_now_defer', 'max__gprs_flow_busy', 'max__arpu', 'max__gprs_now_rest', 'max__gprs_flow_roam', 'min__gprs_flow_commu', 'min__dinner_fee', 'min__call_use', 'min__gprs_flow_video', 'min__gprs_last_defer', 'min__gprs_flow_short', 'min__gprs_resource', 'min__gprs_now_defer', 'min__gprs_flow_busy', 'min__arpu', 'min__gprs_now_rest', 'min__gprs_flow_roam', 'std__calling_diff_dura', 'std__gprs_flow_commu', 'std__dinner_fee', 'std__nos_calling', 'std__call_use', 'std__call_dura_roam', 'std__calling_dura', 'std__gprs_last_defer', 'std__calling_diff_cnt', 'std__gprs_resource', 'std__calling_cnt', 'std__nos_calling_diff', 'std__gprs_flow_busy', 'std__arpu', 'std__gprs_now_rest', 'std__gprs_flow_roam', 'more0cnt__nos_calling', 'more0cnt__calling_cnt', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__call_use', 'moreq25cnt__gprs_flow_video', 'moreq25cnt__calling_dura', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_resource', 'moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是']
+20220620-15:37:32      col_del: None
+20220620-15:37:32      col_char: None
+20220620-15:37:32      col_num: None
+20220620-15:37:32      col_date: None
+20220620-15:37:32      nrows: None
+20220620-15:37:32      if_coltolower: False
+20220620-15:37:32      kwargs: {}
+
+20220620-15:37:32      读取
+20220620-15:37:32  -------------------------读取完毕: (2607, 134) 2022-06-20 15:37:32 -------------------------
+
+20220620-15:37:32  补齐流水线删除的8个fit_in_colnames_字段
+20220620-15:37:32      数据量：(2607, 142)
+
+20220620-15:37:32  数据账期校验:
+20220620-15:37:32      通过
+
+20220620-15:37:32  最优模型 - pipeline2 - 数据转换
+20220620-15:37:32      从流水线中获取WoeTransformer_DF
+20220620-15:37:32      向WoeTransformer_DF.psi_.col_ignore补充流水线中删除的字段，不做稳定度检验（未读取，用np.nan填充）
+20220620-15:37:41      转换前shape：(2607, 142)
+20220620-15:37:41      转换后shape：(2607, 118)
+
+20220620-15:37:41  top原因匹配
+20220620-15:37:41      pipeline1 - 数据转换
+20220620-15:37:41      col_notcause：['acct_month', 'phone_no_null', 'user_id', 'account_id', 'last_stop_date']
+20220620-15:37:41      从流水线中获取WoeTransformer_DF
+20220620-15:37:41      向WoeTransformer_DF.psi_.col_ignore补充流水线中删除的字段，不做稳定度检验（未读取，用np.nan填充）
+
+20220620-15:37:41      数据分箱（union1） 2022-06-20 15:37:41
+20220620-15:37:42      转换前shape：(2607, 142)
+20220620-15:37:42      转换后shape：(2607, 130)
+
+20220620-15:37:42      woe转换 2022-06-20 15:37:42
+20220620-15:37:50      转换前shape：(2607, 130)
+20220620-15:37:50      转换后shape：(2607, 118)
+
+20220620-15:37:50      确定动因字段 2022-06-20 15:37:50
+20220620-15:37:50      剔除非动因字段（0个）：set()
+20220620-15:37:50      动因字段：118个
+
+20220620-15:37:50      计算动因字段的相关矩阵，删除高相关字段
+20220620-15:37:50      输入为相关性系数矩阵
+20220620-15:37:50      提取相关性超过0.8的字段
+20220620-15:37:50      需要删除50个高度相关字段: ['gprs_now_rest', 'grow__gprs_now_defer', 'max__calling_diff_cnt', 'max__gprs_flow_video', 'avg__calling_dura', 'more0cnt__calling_cnt', 'std__gprs_flow_commu', 'max__gprs_resource', 'calling_dura', 'moreq25cnt__gprs_flow_commu', 'avg__arpu', 'grow__call_use', 'calling_diff_cnt', 'sep__gprs_flow_music', 'avg__call_use', 'sep__calling_diff_dura', 'grow__calling_cnt', 'max__calling_diff_dura', 'max__gprs_last_defer', 'nos_calling', 'moreq25cnt__gprs_flow_short', 'avg__gprs_flow_roam', 'gprs_flow_busy', 'max__nos_calling', 'avg__call_dura_roam', 'max__nos_calling_diff', 'wave__gprs_flow_commu', 'avg__gprs_now_rest', 'grow__gprs_flow_music', 'max__gprs_now_defer', 'max__dinner_fee', 'moreq25cnt__gprs_flow_video', 'sep__call_use', 'calling_diff_dura', 'std__gprs_flow_busy', 'sep__calling_cnt', 'gprs_flow_short', 'avg__calling_diff_dura', 'min__gprs_flow_short', 'wave__gprs_flow_short', 'calling_cnt', 'avg__calling_cnt', 'max__call_dura_roam', 'gprs_flow_video', 'sep__gprs_flow_commu', 'min__gprs_flow_video', 'gprs_flow_commu', 'avg__nos_calling_diff', 'avg__gprs_last_defer', 'call_use']
+20220620-15:37:50      动因字段：68个
+
+20220620-15:37:50      从原因中删除用户量过小的 字段-取值
+20220620-15:37:50      阈值 valuecount_limit= 50
+20220620-15:37:50      将2个字段的2个取值（用户量<=50）从原因中剔除（对应的woe置为-999）
+
+20220620-15:37:50      原因排序 2022-06-20 15:37:50
+20220620-15:37:50      top1 2022-06-20 15:37:50
+20220620-15:37:50      top2 2022-06-20 15:37:50
+20220620-15:37:50      top3 2022-06-20 15:37:50
+20220620-15:37:51      排序结束 2022-06-20 15:37:51
+
+20220620-15:37:51      将woe<=woe_thred（0)的原因置空
+20220620-15:37:51      top1: 将10行woe<=woe_thred（0)的colname_top1, colcomment_top1, colvalue_top1, colwoe_top1置空
+20220620-15:37:51      top2: 将46行woe<=woe_thred（0)的colname_top2, colcomment_top2, colvalue_top2, colwoe_top2置空
+20220620-15:37:51      top3: 将108行woe<=woe_thred（0)的colname_top3, colcomment_top3, colvalue_top3, colwoe_top3置空
+
+
+20220620-15:37:51  模型预测
+
+20220620-15:37:51  匹配各分数档位查准率、提升度（非累计）
+
+20220620-15:37:51  概率得分描述统计：
+                                 score
+                       count  2607.000
+                       mean     44.516
+                       std      21.573
+                       min       5.384
+                       25%      27.450
+                       50%      40.278
+                       75%      58.278
+                       max      98.314
+
+20220620-15:37:51  概率得分分段统计：
+                                       用户量      占比
+                       (-0.001, 10.0]      14  0.005370
+                       (10.0, 20.0]       259  0.099348
+                       (20.0, 30.0]       512  0.196394
+                       (30.0, 40.0]       513  0.196778
+                       (40.0, 50.0]       401  0.153817
+                       (50.0, 60.0]       298  0.114308
+                       (60.0, 70.0]       203  0.077867
+                       (70.0, 80.0]       169  0.064825
+                       (80.0, 90.0]       160  0.061373
+                       (90.0, 100.0]       78  0.029919
+
+20220620-15:37:51  模型稳定度：0.01449
+
+20220620-15:37:51  结果数据展示：
+                           acct_month      user_id model_name  month_train  month_test   score  score_cut  precision lift  sms_cnt  call_fee_local      colname_top1            colcomment_top1  colvalue_top1  colwoe_top1            colname_top2                  colcomment_top2         colvalue_top2  colwoe_top2           colname_top3                    colcomment_top3    colvalue_top3  colwoe_top3
+                       0       202012  10000651789   模型示例       202010      202012  34.855          7       0.07  0.5      0.0            0.00   min__dinner_fee    套餐月租费：近3月最小值  (48.385, inf]     0.949081     grow__gprs_now_rest    当月gprs资源余量：近3月成长率  (0.126128, 0.988813]     0.831070              min__arpu              当月arpu：近3月最小值     (48.85, inf]     0.798027
+                       19      202012  10066447578   模型示例       202010      202012  34.823          7       0.07  0.5      0.0            7.69  max__calling_cnt  主叫通话次数：近3月最大值    (38.5, inf]     0.510826  std__calling_diff_dura  主叫异网通话分钟数：近3月标准差       (8.371579, inf]     0.471754  std__nos_calling_diff  主叫异网对端号码个数：近3月标准差  (2.413006, inf]     0.466694
+
+20220620-15:37:51  保存结果数据至：./binaryclassify/eg//predictscore~202012/predict_score_data~202010~202012~202012~3.csv
+20220620-15:37:51  保存数据处理流水线至：./binaryclassify/eg//predictscore~202012/predict_result~202010~202012~202012~3.pkl
+
+20220620-15:37:51  结束时间：2022-06-20 15:37:51
+20220620-15:37:51  耗时：19 s
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline2 PsiTransformer timedata_predict 计算稳定性(不区分正负例)，8个字段稳定性>=psi_limit（0.1）：
+grow__gprs_now_rest                 0.968984
+sep__monthsremain_last_stop_date    0.617580
+grow__gprs_now_defer                0.308627
+wave__gprs_flow_video               0.277455
+grow__call_use                      0.277064
+sep__gprs_flow_commu                0.212799
+grow__gprs_flow_busy                0.193013
+wave__gprs_flow_short               0.171340
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline2 PsiTransformer data_predict X未带有y_carrier属性，不计算稳定度（区分正负例）
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline1 PsiTransformer time2 计算稳定性(不区分正负例)，8个字段稳定性>=psi_limit（0.1）：
+grow__gprs_now_rest                 0.951086
+sep__monthsremain_last_stop_date    0.617580
+grow__gprs_now_defer                0.308627
+wave__gprs_flow_video               0.277455
+grow__call_use                      0.277064
+sep__gprs_flow_commu                0.212799
+grow__gprs_flow_busy                0.193013
+wave__gprs_flow_short               0.171340
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline1 PsiTransformer  X未带有y_carrier属性，不计算稳定度（区分正负例）
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead.  To get a de-fragmented frame, use `newframe = frame.copy()`
+  convert=self.convert_dtype,
+20220620-15:37:51  ==========================================================================================
+
+
+                   ###################################################################### 整理分数数据
+                    
+20220620-15:37:51  合并4个批次的分数结果
+20220620-15:37:51      0: (3833, 23)
+20220620-15:37:51      1: (3412, 23)
+20220620-15:37:51      2: (2597, 23)
+20220620-15:37:51      3: (2607, 23)
+20220620-15:37:51  分数数据合计shape: (12449, 23)
+
+20220620-15:37:51  进行分数排名与划分档位
+20220620-15:37:51  分数档位概览：
+                       100    125
+                       99    124
+                       98    125
+                       97    124
+                       96    125
+                       95    124
+                       94    125
+                       93    124
+                       92    125
+                       91    124
+                       90    125
+                       89    124
+                       88    125
+                       87    124
+                       86    125
+                       85    124
+                       84    125
+                       83    124
+                       82    125
+                       81    124
+                       80    125
+                       79    124
+                       78    125
+                       77    124
+                       76    124
+                       75    125
+                       74    124
+                       73    125
+                       72    124
+                       71    125
+                       70    124
+                       69    125
+                       68    124
+                       67    125
+                       66    124
+                       65    125
+                       64    124
+                       63    125
+                       62    124
+                       61    125
+                       60    124
+                       59    125
+                       58    124
+                       57    125
+                       56    124
+                       55    125
+                       54    124
+                       53    125
+                       52    124
+                       51    124
+                       50    125
+                       49    124
+                       48    125
+                       47    124
+                       46    125
+                       45    124
+                       44    125
+                       43    124
+                       42    125
+                       41    124
+                       40    125
+                       39    124
+                       38    125
+                       37    124
+                       36    125
+                       35    124
+                       34    125
+                       33    124
+                       32    125
+                       31    124
+                       30    125
+                       29    124
+                       28    125
+                       27    124
+                       26    124
+                       25    125
+                       24    124
+                       23    125
+                       22    124
+                       21    125
+                       20    124
+                       19    125
+                       18    124
+                       17    125
+                       16    124
+                       15    125
+                       14    124
+                       13    125
+                       12    124
+                       11    125
+                       10    124
+                       9    125
+                       8    124
+                       7    125
+                       6    124
+                       5    125
+                       4    124
+                       3    125
+                       2    124
+                       1    125
+                       dtype: int64
+
+20220620-15:37:51  保存结果数据至：./binaryclassify/eg//predictscore~202012/predict_score_data~202010~202012~202012.csv

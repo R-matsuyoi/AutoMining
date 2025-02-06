@@ -1,0 +1,311 @@
+20220305-00:28:43  加载训练结果：./binaryclassify/eg/traintest~202011~202012/train_result~202011~202012.pkl
+20220305-00:28:44  从训练结果中获取Info,并加入预测所需信息
+
+20220305-00:28:44  condition中涉及日数据，接下来的预测过程不得不暂时忽略日数据条件
+20220305-00:28:44  务必通知清单输出人员在输出清单时补充这些条件
+20220305-00:28:44  确认忽略日数据条件，不会造成数据量的异常突增
+20220305-00:28:44  检查剔除前后的逻辑确保可通过在清单输出时补充日数据条件以得到预期用户范围的清单
+
+20220305-00:28:44  --- table_day从ml.ml_feature_info_yw_user_day,  acct_day, 1, 15修改为np.nan
+20220305-00:28:44  --- 剔除condition_base中的日数据条件
+                   原始：
+                   
+                       phone_no_null is null and
+                       dayvalue_phone_no_null is null and
+                       last_stop_date is not null and
+                       innet_months >= 3
+                   剔除后：
+                   phone_no_null is null and
+                    last_stop_date is not null and
+                    innet_months >= 3
+
+20220305-00:28:44  --- 剔除condition中的日数据条件
+                   原始：
+                   dayvalue_user_status='在网-正常' and 
+                       phone_no_null is null and
+                       dayvalue_phone_no_null is null and
+                       last_stop_date is not null and
+                       innet_months >= 3
+                   剔除后：
+                   phone_no_null is null and
+                    last_stop_date is not null and
+                    innet_months >= 3
+
+
+                   ###################################################################### 加工预测账期近n月基础数据
+                    
+20220305-00:28:44  开始时间：2022-03-05 00:28:44
+20220305-00:28:44  month: 202101
+20220305-00:28:44  参数设置：
+                       step: predict
+                       Info.model_name: 模型示例
+                       Info.n_recent: 3
+                       drop_midtable: True
+                       cover_table_all: True
+
+                   ------------------------------------- 检查各前置表 --------------------------------------------------- 
+20220305-00:28:44  检查 ml.ml_feature_info_yw_user_m
+20220305-00:28:44      72 列
+20220305-00:28:44      202101账期： 18000行
+20220305-00:28:44      202012账期： 15000行
+20220305-00:28:44      202011账期： 10000行
+
+
+20220305-00:28:44  检查 ml.ml_feature_add_yw_user_m
+20220305-00:28:44      4 列
+20220305-00:28:44      202101账期： 18000行
+20220305-00:28:44      202012账期： 15000行
+20220305-00:28:44      202011账期： 10000行
+
+
+20220305-00:28:44  未设置Info.table_day
+
+
+
+20220305-00:28:44  预测集无需Info.table_y
+
+
+
+
+                   -------------------- 汇总当期特征与目标：ml.dm_zc_moxing_info_add_202101 -------------------------- 
+20220305-00:28:44  查询表： 
+                       select concat(table_schema, '.', table_name) full_name
+                       from information_schema.tables 
+                       where table_schema = 'ml' and table_name='dm_zc_moxing_info_add_202101'
+                       存在1个表 
+20220305-00:28:44  ml.dm_zc_moxing_info_add_202101已存在，将重建覆盖
+20220305-00:28:44  建表语句： 
+                       drop table if exists ml.dm_zc_moxing_info_add_202101;
+                       select pg_sleep(10);
+                       create table ml.dm_zc_moxing_info_add_202101 as
+                       select * from (
+                           select a.* 
+                           , a2.age_add, a2.sex_add
+                           
+                           from (select * from ml.ml_feature_info_yw_user_m where cast(acct_month as text)='202101') a 
+                           left join (select*from ml.ml_feature_add_yw_user_m where cast(acct_month as text)='202101') a2 on a.user_id = a2.user_id
+                           
+                       ) t where phone_no_null is null and
+                        last_stop_date is not null and
+                        innet_months >= 3
+20220305-00:28:54      sql执行完毕
+20220305-00:28:54  统计 ml.dm_zc_moxing_info_add_202101 的行列数
+20220305-00:28:54      15300行，74列
+20220305-00:28:54          dis_predict_total {'count': 15300}
+
+                   ------------------------- 打分集-当月账期数据：ml.mid_eg_now_predict_202101 ---------------------------- 
+20220305-00:28:54  建表语句（202101账期当月数据） 
+                       drop table if exists ml.mid_eg_now_predict_202101;
+                       select pg_sleep(10);
+                       create table ml.mid_eg_now_predict_202101 as 
+                       select *  from ml.dm_zc_moxing_info_add_202101
+                       where phone_no_null is null and
+                        last_stop_date is not null and
+                        innet_months >= 3
+20220305-00:29:04      sql执行完毕
+20220305-00:29:04  数据量： select  count(1) from ml.mid_eg_now_predict_202101
+20220305-00:29:04      dis_predict_model {'count': 15300}
+
+
+                   ------------------------ 合并近n月数据：ml.mid_eg_recent_predict_202101  -------------------------------- 
+20220305-00:29:04  建表语句： 
+                       drop table if exists ml.mid_eg_recent_predict_202101;
+                       select pg_sleep(10);
+                       create table ml.mid_eg_recent_predict_202101 as 
+                       select user_acct_month, data_use, acct_month, user_id, phone_no_null, account_id, innet_months, last_stop_date, dinner_fee, gprs_last_defer, gprs_resource, gprs_now_rest, call_use, if_nolimit, if_5g_dinner, arpu, calling_cnt, calling_dura, calling_diff_cnt, calling_diff_dura, gprs_flow_5g, gprs_flow_busy, gprs_now_defer, gprs_flow_roam, call_dura_roam, days_gprs, days_call, nos_call, nos_calling, nos_calling_diff, sms_cnt, call_fee_local, gprs_flow_video, gprs_flow_short, gprs_flow_music, gprs_flow_commu, gprs_flow_game
+                       from (
+                           select cast(202101 as text) user_acct_month, cast('data_predict'  as text) data_use, * from ml.mid_eg_now_predict_202101
+                       ) t0
+                       union all 
+                       select user_acct_month, data_use, acct_month, user_id, phone_no_null, account_id, innet_months, last_stop_date, dinner_fee, gprs_last_defer, gprs_resource, gprs_now_rest, call_use, if_nolimit, if_5g_dinner, arpu, calling_cnt, calling_dura, calling_diff_cnt, calling_diff_dura, gprs_flow_5g, gprs_flow_busy, gprs_now_defer, gprs_flow_roam, call_dura_roam, days_gprs, days_call, nos_call, nos_calling, nos_calling_diff, sms_cnt, call_fee_local, gprs_flow_video, gprs_flow_short, gprs_flow_music, gprs_flow_commu, gprs_flow_game
+                       from (
+                           select cast(202101 as text) user_acct_month, cast('data_predict'  as text) data_use, 
+                           b.* 
+                           , a2.age_add, a2.sex_add 
+                           from ml.mid_eg_now_predict_202101 a
+                           inner join (select * from ml.ml_feature_info_yw_user_m where cast(acct_month as text)='202012') b on a.user_id = b.user_id
+                           left join (select*from ml.ml_feature_add_yw_user_m where cast(acct_month as text)='202012') a2 on a.user_id = a2.user_id
+                       ) t1
+                       union all
+                       select user_acct_month, data_use, acct_month, user_id, phone_no_null, account_id, innet_months, last_stop_date, dinner_fee, gprs_last_defer, gprs_resource, gprs_now_rest, call_use, if_nolimit, if_5g_dinner, arpu, calling_cnt, calling_dura, calling_diff_cnt, calling_diff_dura, gprs_flow_5g, gprs_flow_busy, gprs_now_defer, gprs_flow_roam, call_dura_roam, days_gprs, days_call, nos_call, nos_calling, nos_calling_diff, sms_cnt, call_fee_local, gprs_flow_video, gprs_flow_short, gprs_flow_music, gprs_flow_commu, gprs_flow_game
+                       from (
+                           select cast(202101 as text) user_acct_month, cast('data_predict'  as text) data_use, 
+                           b.* 
+                           , a2.age_add, a2.sex_add 
+                           from ml.mid_eg_now_predict_202101 a
+                           inner join (select * from ml.ml_feature_info_yw_user_m where cast(acct_month as text)='202011') b on a.user_id = b.user_id
+                           left join (select*from ml.ml_feature_add_yw_user_m where cast(acct_month as text)='202011') a2 on a.user_id = a2.user_id
+                       ) t2
+20220305-00:29:15      sql执行完毕
+20220305-00:29:15  统计ml.mid_eg_recent_predict_202101行列数
+20220305-00:29:15      8302行，37列
+
+                   --------------------------------- 核验各账期数据量  -------------------------------------------------- 
+20220305-00:29:15  sql语句： 
+                       select user_acct_month, data_use, acct_month, count(1) 
+                       from ml.mid_eg_recent_predict_202101 
+                       group by user_acct_month, data_use, acct_month 
+                       order by user_acct_month, data_use, acct_month
+
+20220305-00:29:15  结果：
+                     user_acct_month      data_use  acct_month  count
+                   0          202101  data_predict      202011   8302
+                   1          202101  data_predict      202012  12655
+                   2          202101  data_predict      202101  15300
+
+
+D:\STUDY\Python\PycharmProjects\ModelProject\selfmodule\tablemodule\tablefun.py:910: UserWarning: 下列账期用户量不同，请检查！
+                              acct_month  count
+user_acct_month data_use                       
+202101          data_predict      202011   8302
+                data_predict      202012  12655
+                data_predict      202101  15300
+  warnings.warn(w)
+
+                   -------------------------------- 删除中间表 ----------------------------------------------------- 
+20220305-00:29:15  sql语句： drop table if exists ml.mid_eg_model_predict_202101
+20220305-00:29:15      sql执行完毕
+20220305-00:29:15  sql语句： drop table if exists ml.mid_eg_now_predict_202101
+20220305-00:29:15      sql执行完毕
+
+20220305-00:29:15  返回结果表名：ml.mid_eg_recent_predict_202101
+20220305-00:29:15  将Info保存至./binaryclassify/eg/traintest~202011~202012/Info~base_predict.pkl
+
+20220305-00:29:15  结束时间：2022-03-05 00:29:15
+20220305-00:29:15  耗时：31 s
+
+
+20220305-00:29:15  将数据拆分成 3 份分别预测
+
+20220305-00:29:15  =========================================== 0份：[0, 1, 2, 3] ==========================================
+20220305-00:29:15  修改Info，用于分批预测
+20220305-00:29:15  condition: right(user_id::text, 1) in ('0', '1', '2', '3')
+                   table_predict:./binaryclassify/eg//predictscore~202101/predict_data~202101~0.csv
+                   table_score:./binaryclassify/eg//predictscore~202101/predict_score_data~202011~202012~202101~0.csv
+
+                   ###################################################################### 预测集加工
+                    
+20220305-00:29:15  开始时间：2022-03-05 00:29:15
+20220305-00:29:15  参数设置：
+                       stage: create
+                       table_in: ml.mid_eg_recent_predict_202101
+                       Info.iv_limit: 0.05
+                       Info.auto_pair2: False
+                       step: predict
+                       Info.model_name: 模型示例
+                       Info.r_limit: 0.95
+
+20220305-00:29:15  ------------------------- 读取数据: ml.mid_eg_recent_predict_202101 2022-03-05 00:29:15 -------------------------
+20220305-00:29:15      src: gp
+20220305-00:29:15      condition: right(user_id::text, 1) in ('0', '1', '2', '3')
+20220305-00:29:15      col_need(36): ['user_acct_month', 'data_use', 'acct_month', 'user_id', 'account_id', 'innet_months', 'last_stop_date', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'if_nolimit', 'if_5g_dinner', 'arpu', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_5g', 'gprs_flow_busy', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'days_gprs', 'days_call', 'nos_call', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game']
+20220305-00:29:15      col_del: None
+20220305-00:29:15      col_char(7): ['user_acct_month', 'data_use', 'acct_month', 'user_id', 'account_id', 'if_nolimit', 'if_5g_dinner']
+20220305-00:29:15      col_num(28): ['innet_months', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'arpu', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_5g', 'gprs_flow_busy', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'days_gprs', 'days_call', 'nos_call', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game']
+20220305-00:29:15      col_date(1): ['last_stop_date']
+20220305-00:29:15      nrows: None
+20220305-00:29:15      if_coltolower: True
+20220305-00:29:15      kwargs: {}
+
+20220305-00:29:15      读取
+20220305-00:29:15      shape: (14870, 36)
+
+20220305-00:29:15  -------------------------读取完毕: (14870, 36) 2022-03-05 00:29:15 -------------------------
+
+20220305-00:29:15  手动衍生_py7个字段: {'monthsremain_last_stop_date': '最后停机时间：剩余时长', 'days_call_p': '通话天数占比', 'days_call_p_1': '通话天数占比_1', 'days_call_p_2': '通话天数占比_2', 'days_call_p_3': '通话天数占比_3', 'days_call_p_4': '通话天数占比_4', 'greatest_gprs_app': 'app偏好'}
+20220305-00:29:15  monthsremain_last_stop_date: last_stop_date - current_date
+20220305-00:29:16  days_call_p: days_call / days_month
+20220305-00:29:16  days_call_p_1: days_call_p + days_gprs
+20220305-00:29:16  days_call_p_2: days_call_p_1 + days_gprs
+20220305-00:29:16  days_call_p_3: days_call_p_2 + days_gprs
+20220305-00:29:16  days_call_p_4: days_call_p_3 + days_gprs
+20220305-00:29:16  greatest_gprs_app: {'gprs_flow_video': 'video', 'gprs_flow_short': 'short', 'gprs_flow_music': 'music', 'gprs_flow_commu': 'commu', 'gprs_flow_game': 'game'}
+20220305-00:29:18  数据量: (14870, 43)
+
+20220305-00:29:18  检查数据
+20220305-00:29:18  各账期数据量分布：
+                       202011  data_predict    3384
+                       202012  data_predict    5186
+                       202101  data_predict    6300
+                       dtype: int64
+20220305-00:29:18  各账期数据量不一致
+20220305-00:29:18  以nan填充缺少账期的记录
+20220305-00:29:18      修改后：
+                       202011  data_predict    6300
+                       202012  data_predict    6300
+                       202101  data_predict    6300
+                       dtype: int64)
+20220305-00:29:18  
+                   diff_limitweiNone,不考察近n月字段各账期取值分布, dis_exam返回None！
+
+
+20220305-00:29:18  填充数值型&类别型字段缺失值
+20220305-00:29:18  日期型字段缺失值情况：
+                       last_stop_date    4030
+                       dtype: int64
+
+                   ----------------------------------------- 当月 类别型 onthot 
+20220305-00:29:18  ['if_5g_dinner~是', 'greatest_gprs_app~commu', 'greatest_gprs_app~video']
+
+                   ----------------------------------------- 当月 数值型&类别型 原始数据 
+20220305-00:29:18  (6300, 34)
+20220305-00:29:18  筛选衍生字段的 原始/手动衍生_sql 字段
+
+                   ----------------------------------------- 近n月 数值型 近3月均值 
+20220305-00:29:18  字段个数：24, 添加字段：None
+20220305-00:29:18  (6300, 58)
+
+                   ----------------------------------------- 近n月 数值型 近3月离散系数 
+20220305-00:29:18  字段个数：6, 添加字段：None
+20220305-00:29:18  (6300, 64)
+
+                   ----------------------------------------- 近n月 数值型 近3月波动性 
+20220305-00:29:18  字段个数：12, 添加字段：None
+20220305-00:29:18  (6300, 76)
+
+                   ----------------------------------------- 近n月 数值型 近3月成长率 
+20220305-00:29:18  字段个数：9, 添加字段：None
+20220305-00:29:18  (6300, 85)
+
+                   ----------------------------------------- 近n月 数值型 近3月最大值 
+20220305-00:29:18  字段个数：17, 添加字段：None
+20220305-00:29:18  (6300, 102)
+
+                   ----------------------------------------- 近n月 数值型 近3月最小值 
+20220305-00:29:18  字段个数：18, 添加字段：None
+20220305-00:29:18  (6300, 120)
+
+                   ----------------------------------------- 近n月 数值型 近3月标准差 
+20220305-00:29:18  字段个数：15, 添加字段：None
+20220305-00:29:19  (6300, 135)
+
+                   ----------------------------------------- 近n月 数值型 大于x的月份数 
+20220305-00:29:19  ('more0cnt', '近3月大于0的月份数')
+20220305-00:29:19  ('moreq25cnt', '近3月大于第一四分位数的月份数')
+20220305-00:29:19  (6300, 151)
+
+                   ----------------------------------------- 近n月 类别型 取某值的月份数 
+20220305-00:29:19  字段个数：1, 添加字段：None
+20220305-00:29:19  (6300, 152)
+
+                   ----------------------------------------- 汇总最终宽表 
+20220305-00:29:19  table.shape:(6300, 152)
+
+20220305-00:29:19  保存宽表结果至：./binaryclassify/eg//predictscore~202101/predict_data~202101~0.csv
+
+
+
+Traceback (most recent call last):
+  File "<ipython-input-4-15895c6e63b2>", line 63, in <module>
+    table_predict[model_name] = tab_explore_create(base_predict[model_name], Info_i, 'create', if_condition=True)
+  File "D:\STUDY\Python\PycharmProjects\ModelProject\selfmodule\tablemodule\tablefun.py", line 2214, in tab_explore_create
+    na_inf_examine(table.drop(columns=supply_other_date))
+  File "D:\installdir_xj\Anaconda3\lib\site-packages\pandas\core\frame.py", line 3997, in drop
+    errors=errors,
+  File "D:\installdir_xj\Anaconda3\lib\site-packages\pandas\core\generic.py", line 3936, in drop
+    obj = obj._drop_axis(labels, axis, level=level, errors=errors)
+  File "D:\installdir_xj\Anaconda3\lib\site-packages\pandas\core\generic.py", line 3970, in _drop_axis
+    new_axis = axis.drop(labels, errors=errors)
+  File "D:\installdir_xj\Anaconda3\lib\site-packages\pandas\core\indexes\base.py", line 5018, in drop
+    raise KeyError(f"{labels[mask]} not found in axis")
+KeyError: "['last_stop_date'] not found in axis"

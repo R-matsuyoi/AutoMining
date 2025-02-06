@@ -1,0 +1,780 @@
+
+                   ###################################################################### 加工训练账期近n月基础数据
+                    
+20220614-09:53:21  开始时间：2022-06-14 09:53:21
+20220614-09:53:21  ---- month: 202010
+20220614-09:53:21  ---- 参数设置：
+                       ---- step: train
+                       ---- Info.model_name: 模型示例
+                       ---- Info.n_recent: 3
+                       ---- Info.Pcase_limit: 1000
+                       ---- Info.traintable_ratio: 2
+                       ---- Info.Pcumsum_limit: 2
+                       ---- Info.timein_count: 500
+
+                   ------------------------------------- 检查各前置表 --------------------------------------------------- 
+20220614-09:53:21  检查 kehujingyingbudb.ml_xy_eg_m
+
+
+Traceback (most recent call last):
+  File "D:\Python for Windows\lib\site-packages\IPython\core\interactiveshell.py", line 3296, in run_code
+    exec(code_obj, self.user_global_ns, self.user_ns)
+  File "<ipython-input-19-542d49823be3>", line 1, in <module>
+    base_train[model_name], Info = privy_basedatafun('train', Info, nmg_yaxin=nmg_yaxin)
+  File "D:\工作\模型脚本\ModelProject\selfmodule\tablemodule\tablefun.py", line 668, in privy_basedatafun
+    field_all = get_field(Info.table_XY).index
+  File "D:\工作\模型脚本\ModelProject\selfmodule\toolmodule\datatrans.py", line 356, in get_field
+    field = my_sql_fun(sql, method='read', index_col='col_name').data_type
+  File "D:\工作\模型脚本\ModelProject\selfmodule\toolmodule\datatrans.py", line 232, in my_sql_fun
+    conn1 = psycopg2.connect(dbname=dbname, user=user, password=pwd, port=port, host=host, client_encoding='UTF-8')
+  File "D:\Python for Windows\lib\site-packages\psycopg2\__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError
+                   Out[20]: 20220614-10:31:59  
+                            model_name month_train month_test Pcase_limit traintable_ratio Pcumsum_limit timein_count timeout_limit trainproc_ratiolist iv_limit r_limit marketlevel short_name  \
+                   模型示例   模型示例      202010     202012        1000                2             2          500          1000          [1, 2, 10]     0.05    0.95           1         eg   
+                   
+                                                table_XY s_field_base  ...                              dict_sortscore score_targetnull                                         field_base  \
+                   模型示例  kehujingyingbudb.ml_xy_eg_m    s_yw_fake  ...  {'sms_cnt': True, 'call_fee_local': False}            Ncase                       field_name               ...   
+                   
+                                                                         condition month_tabexp                           model_wd_traintest                                    f_field_comment  \
+                   模型示例  user_status='在网-正常' and \n    phone_no_null is...       202010  ./binaryclassify/eg/traintest~202010~202012  ./binaryclassify/eg/traintest~202010~202012/ta...   
+                   
+                                           col_del                                        table_train                                         table_test freq_limit unique_limit valuecount_limit  \
+                   模型示例  [user_acct_month, rn]  ./binaryclassify/eg/traintest~202010~202012/tr...  ./binaryclassify/eg/traintest~202010~202012/te...       0.95         5000               50   
+                   
+                            random_state n_recent  
+                   模型示例         None        3  
+                   
+                   [1 rows x 41 columns]
+20220614-11:30:01  将excel粘贴的长字符串转为DataFrame
+20220614-11:30:02      eval: trainproc_ratiolist
+20220614-11:30:02  删除model_name以#开头的模型信息：['# 模型示例2', '# 流失预警模型_移网', '# 转融合模型_单C', '# 副卡加装模型_移网', '# 套餐高迁模型', '# 流量月包加装模型', '# 终端换机模型', '# 加定向流量包模型', '# 5G加包模型', '# 视频彩铃潜客模型']
+
+20220614-11:30:02  将excel粘贴的长字符串转为DataFrame
+20220614-11:30:02      eval: col_out
+20220614-11:30:02      eval: dict_sortscore
+20220614-11:30:02  
+                   转换、检查、纠正field_base
+20220614-11:30:02  
+                   ------------------------------------------------------------ s_yw_fake ------------------------------------------------------------
+20220614-11:30:02  field_base: 96行
+20220614-11:30:02  将excel粘贴的长字符串转为DataFrame
+20220614-11:30:02      eval: tableXday_desc
+20220614-11:30:02      eval: tableXscore_desc
+20220614-11:30:02  删除2个available“不可用”字段：['gprs_flow_tnet', 'days_outside']
+20220614-11:30:02  field_base: 94行
+
+20220614-11:30:02  删除1个基于“不可用”字段加工的手动衍生_py字段：
+                           field_name                    formula
+                   58  days_outside_p  days_outside / days_month
+20220614-11:30:02  field_base: 93行
+20220614-11:30:02  删除1个基于“不可用”字段加工的自动衍生_py字段：['valuecnt__days_outside_p~1']
+20220614-11:30:02  field_base: 92行
+
+
+D:\工作\模型脚本\ModelProject\selfmodule\tablemodule\tablefun.py:113: UserWarning: 确定下列时长类字段的renmark是否限制 ‘不参与近n月自动衍生’：
+                     field_name                   comment remark
+14  monthsaready_last_stop_date  最后停机时间：已发生时长    NaN
+15  monthsremain_last_stop_date    最后停机时间：剩余时长    NaN
+  warnings.warn(s)
+20220614-11:30:02  模型示例
+20220614-11:30:02  ------------------------------------------------------------------------------------------------------------------------                    
+
+20220614-11:30:02  infos中不包括freq_limit， 统一赋值为默认值：0.95
+20220614-11:30:02  infos中不包括unique_limit， 统一赋值为默认值：5000
+20220614-11:30:02  infos中不包括valuecount_limit， 统一赋值为默认值：50
+20220614-11:30:02  infos中不包括random_state， 统一赋值为默认值：None
+20220614-11:30:02  infos中不包括n_recent， 统一赋值为默认值：3
+20220614-11:30:34  
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 模型宽表探索 & 训练集、测试集加工 & 训练测试过程 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+20220614-11:30:34  ################################################################################ 模型示例 ################################################################################
+20220614-11:30:40  日志文件：./binaryclassify/eg/traintest~202010~202012/log/eg_traintest~202010~202012~20220614113040.txt
+
+                                      ###################################################################### 加工训练账期近n月基础数据
+                                       
+20220614-11:30:46  20220614-11:30:46  开始时间：2022-06-14 11:30:46
+20220614-11:30:46  20220614-11:30:46  ---- month: 202010
+20220614-11:30:46  20220614-11:30:46  ---- 参数设置：
+                                          ---- step: train
+                                          ---- Info.model_name: 模型示例
+                                          ---- Info.n_recent: 3
+                                          ---- Info.Pcase_limit: 1000
+                                          ---- Info.traintable_ratio: 2
+                                          ---- Info.Pcumsum_limit: 2
+                                          ---- Info.timein_count: 500
+
+                                      ------------------------------------- 检查各前置表 --------------------------------------------------- 
+20220614-11:30:46  20220614-11:30:46  检查 kehujingyingbudb.ml_xy_eg_m
+
+
+
+
+Traceback (most recent call last):
+  File "D:\Python for Windows\lib\site-packages\IPython\core\interactiveshell.py", line 3296, in run_code
+    exec(code_obj, self.user_global_ns, self.user_ns)
+  File "<ipython-input-25-2ce05d8ad1bf>", line 3, in <module>
+    base_train[model_name], Info = privy_basedatafun('train', Info, nmg_yaxin=nmg_yaxin)
+  File "D:\工作\模型脚本\ModelProject\selfmodule\tablemodule\tablefun.py", line 668, in privy_basedatafun
+    field_all = get_field(Info.table_XY).index
+  File "D:\工作\模型脚本\ModelProject\selfmodule\toolmodule\datatrans.py", line 356, in get_field
+    field = my_sql_fun(sql, method='read', index_col='col_name').data_type
+  File "D:\工作\模型脚本\ModelProject\selfmodule\toolmodule\datatrans.py", line 232, in my_sql_fun
+    conn1 = psycopg2.connect(dbname=dbname, user=user, password=pwd, port=port, host=host, client_encoding='UTF-8')
+  File "D:\Python for Windows\lib\site-packages\psycopg2\__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError
+                                      Out[26]: 20220614-11:40:50  20220614-11:40:50  
+                                      Infotuple(model_name='模型示例', month_train=202010, month_test=202012, Pcase_limit=1000, traintable_ratio=2, Pcumsum_limit=2, timein_count=500, timeout_limit=1000, trainproc_ratiolist=[1, 2, 10], iv_limit=0.05, r_limit=0.95, marketlevel=1, short_name='eg', table_XY='kehujingyingbudb.ml_xy_eg_m', s_field_base='s_yw_fake', condition_base='\n    phone_no_null is null and\n    last_stop_date is not null and\n    innet_months >= 3', condition_add="user_status='在网-正常'", available_add='available_notzd', col_month='acct_month', col_id='user_id', col_target='flag_eg', Pcase=1, Ncase=0, target_lag=1, col_stratified=nan, col_out=['acct_month'], dict_sortscore={'sms_cnt': True, 'call_fee_local': False}, score_targetnull='Ncase', field_base=                     field_name                                                                    comment dtype_db dtype_classify     field_src  \
+                                      0                    acct_month                                               账期                           bigint         数值型          原始   
+                                      1                 phone_no_null                                           手机号码                          numeric         类别型          原始   
+                                      2                   phone_no_tm                                         模糊手机号                             text         类别型          原始   
+                                      3                       user_id                                           手机号id                             text         类别型          原始   
+                                      4                     dinner_id                                       主套餐策划id                             text         类别型          原始   
+                                      5                    account_id                                           帐户编号                          numeric         类别型          原始   
+                                      6                    innet_date                                           入网日期                             text         日期型          原始   
+                                      7                  innet_months                                           入网时长                           bigint         数值型          原始   
+                                      8                           age                                               年龄                           bigint         数值型          原始   
+                                      9                           sex                                               性别                             text         类别型          原始   
+                                      10                      age_add                               table_a_add测试字段1                          integer         数值型  手动衍生_sql   
+                                      11                      sex_add                               table_a_add测试字段2                             text         类别型  手动衍生_sql   
+                                      12                  user_status                                           用户状态                             text         类别型          原始   
+                                      13               last_stop_date                                       最后停机时间                             text         日期型          原始   
+                                      14  monthsaready_last_stop_date                           最后停机时间：已发生时长                          numeric         数值型   手动衍生_py   
+                                      15  monthsremain_last_stop_date                             最后停机时间：剩余时长                          numeric         数值型   手动衍生_py   
+                                      16                       dinner                                             主套餐                             text         类别型          原始   
+                                      17                   dinner_fee                                         套餐月租费                          numeric         数值型          原始   
+                                      18              gprs_last_defer                                       流量滚存资源                           bigint         数值型          原始   
+                                      19                gprs_resource                                   gprs国内资源总量                           bigint         数值型          原始   
+                                      20                gprs_now_rest                                   当月gprs资源余量                          numeric         数值型          原始   
+                                      21                     call_use                                     语音资源使用量                          numeric         数值型          原始   
+                                      22                   if_nolimit                             是否不限量套餐到达用户                             text         类别型          原始   
+                                      23                 if_5g_dinner                                         是否5g套餐                             text         类别型          原始   
+                                      24                   if_5g_term                                     是否5g终端客户                             text         类别型          原始   
+                                      25                        if_jt                                       是否集团成员                             text         类别型          原始   
+                                      26                  start_level                                       客户星级标识                             text         类别型          原始   
+                                      27                    cred_type                                       机主证件类型                             text         类别型          原始   
+                                      28                if_cred_multi                                        一证n号标识                           bigint         类别型          原始   
+                                      29                         arpu                                           当月arpu                          numeric         数值型          原始   
+                                      30                      pay_cnt                                         自充值次数                           bigint         数值型          原始   
+                                      31                      pay_fee                                         自充值额度                          numeric         数值型          原始   
+                                      32                 acct_balance                                           账户余额                          numeric         数值型          原始   
+                                      33                   term_model                                       终端品牌类型                             text         类别型          原始   
+                                      34                   term_brand                                           终端品牌                             text         类别型          原始   
+                                      35                    term_type                                           终端类型                             text         类别型          原始   
+                                      36                      sk_type                                           双卡类型                             text         类别型          原始   
+                                      37                  if_new_term                                       是否新机用户                             text         类别型          原始   
+                                      38                  calling_cnt                                       主叫通话次数                          numeric         数值型          原始   
+                                      39                 calling_dura                                   当月主叫通话时长                          numeric         数值型          原始   
+                                      40                   called_cnt                                       被叫通话次数                          numeric         数值型          原始   
+                                      41                  called_dura                                   当月被叫通话时长                          numeric         数值型          原始   
+                                      42             calling_diff_cnt                                   主叫异网通话次数                          numeric         数值型          原始   
+                                      43            calling_diff_dura                                 主叫异网通话分钟数                          numeric         数值型          原始   
+                                      44                    gprs_flow                                         gprs总流量                          numeric         数值型          原始   
+                                      46                 gprs_flow_4g                                         gprs4g流量                          numeric         数值型          原始   
+                                      47                 gprs_flow_5g                                        gprs 5g流量                          numeric         数值型          原始   
+                                      48               gprs_flow_busy                                     gprs-忙时-流量                          numeric         数值型          原始   
+                                      49               gprs_flow_idle                                     gprs-闲时-流量                          numeric         数值型          原始   
+                                      50               gprs_now_defer                                 可延递流量资源总量                          numeric         数值型          原始   
+                                      51               gprs_flow_roam                                 gprs-国内漫游-流量                          numeric         数值型          原始   
+                                      52               call_dura_roam                                      省际漫游-时长                          numeric         数值型          原始   
+                                      53                    days_roam                                       国内漫出天数                          numeric         数值型          原始   
+                                      54                  days_roam_p                              国内漫出天数/当月天数                          numeric         数值型   手动衍生_py   
+                                      55                gprs_flow_gat                               gprs-港澳台漫游-流量                          numeric         数值型          原始   
+                                      56                     days_gat                                    港澳台漫游-时长                          numeric         数值型          原始   
+                                      59                    days_gprs                                           上网天数                          numeric         数值型          原始   
+                                      60                  days_gprs_p                                       上网天数占比                          numeric         数值型   手动衍生_py   
+                                      61                    days_call                                           通话天数                          numeric         数值型          原始   
+                                      62                  days_call_p                                       通话天数占比                          numeric         数值型   手动衍生_py   
+                                      63                days_call_p_1                                     通话天数占比_1                          numeric         数值型   手动衍生_py   
+                                      64                days_call_p_2                                     通话天数占比_2                          numeric         数值型   手动衍生_py   
+                                      65                days_call_p_3                                     通话天数占比_3                          numeric         数值型   手动衍生_py   
+                                      66                days_call_p_4                                     通话天数占比_4                          numeric         数值型   手动衍生_py   
+                                      67                     nos_call                             用户通信对端手机号码数                          numeric         数值型          原始   
+                                      68                  nos_calling                               主叫通话对端号码个数                          numeric         数值型          原始   
+                                      69             nos_calling_diff                               主叫异网对端号码个数                          numeric         数值型          原始   
+                                      70                      sms_cnt                               短信-点对点短信-条数                          numeric         数值型          原始   
+                                      71               call_fee_local                                         本地通话费                          numeric         数值型          原始   
+                                      72                call_fee_roam                                         漫游通话费                          numeric         数值型          原始   
+                                      73                  gprs_income                                       流量出账收入                          numeric         数值型          原始   
+                                      74                     gprs_fee                                    流量出账-流量费                          numeric         数值型          原始   
+                                      75                     call_fee                                       套餐外语音费                          numeric         数值型          原始   
+                                      76              gprs_flow_video                                     视频类应用流量                          numeric         数值型          原始   
+                                      77              gprs_flow_short                                    小视频系app流量                          numeric         数值型          原始   
+                                      78              gprs_flow_music                                     音乐类应用流量                          numeric         数值型          原始   
+                                      79              gprs_flow_commu                                     通信类应用流量                          numeric         数值型          原始   
+                                      80               gprs_flow_game                                     游戏类应用流量                          numeric         数值型          原始   
+                                      81            greatest_gprs_app                                            app偏好                             text         类别型   手动衍生_py   
+                                      82    paste_dinner_innet_months                             主套餐、入网时长：交叉                          numeric         类别型   手动衍生_py   
+                                      83        dayvalue_calling_dura                                 次月dd日前主叫时长                          numeric         数值型          原始   
+                                      84           dayvalue_gprs_flow                               次月dd日前流量使用量                          numeric         数值型          原始   
+                                      85         dayvalue_user_status                                   次月dd日用户状态                             text         类别型          原始   
+                                      86       dayvalue_phone_no_null                                           次月dd日                          numeric         类别型          原始   
+                                      88                      flag_eg                          是否eg,模型示例的目标字段                          integer         数值型          原始   
+                                      89                     flag_eg2                        是否eg2,模型示例2的目标字段                             text         类别型          原始   
+                                      90                score_flag_eg                                     模型示例的分数                          numeric         数值型          原始   
+                                      91            ago_score_flag_eg                               模型示例的分数(历史)                          numeric         数值型   手动衍生_py   
+                                      92               score_flag_eg2                                    模型示例2的分数                          numeric         数值型          原始   
+                                      93           ago_score_flag_eg2                              模型示例2的分数(历史)                          numeric         数值型   手动衍生_py   
+                                      94                           rn  随机排序字段（为兼容解决内蒙古电信亚信平台随机抽样sql执行超时报错）......   bigint         数值型  手动衍生_sql   
+                                      95                     acct_day                                       日表账期字段                             text         类别型          其他   
+                                      
+                                                                                 table available available_notzd available_zd                                            formula               remark must_remain  \
+                                      0     kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      1     kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN       不参与自动衍生         NaN   
+                                      2     kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN       不参与自动衍生         NaN   
+                                      3     kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      4     kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN   不参与当月自动衍生         NaN   
+                                      5     kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN   不参与当月自动衍生          是   
+                                      6     kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      7     kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN  不参与近n月自动衍生         NaN   
+                                      8     kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      9     kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      10     kehujingyingbudb.ml_feature_add_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      11     kehujingyingbudb.ml_feature_add_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      12    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN          是   
+                                      13    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      14                                        python       NaN             NaN          NaN                      current_date - last_stop_date                  NaN         NaN   
+                                      15                                        python       NaN             NaN          NaN                      last_stop_date - current_date                  NaN         NaN   
+                                      16    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      17    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      18    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN   不参与当月自动衍生         NaN   
+                                      19    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      20    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      21    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      22    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      23    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      24    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      25    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      26    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      27    kehujingyingbudb.ml_feature_info_yw_user_m       NaN          不可用          NaN                                                NaN                  NaN         NaN   
+                                      28    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      29    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      30    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      31    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      32    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      33    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      34    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      35    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      36    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN       不参与自动衍生         NaN   
+                                      37    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      38    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      39    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      40    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      41    kehujingyingbudb.ml_feature_info_yw_user_m       NaN          不可用          NaN                                                NaN                  NaN         NaN   
+                                      42    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      43    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      44    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      46    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      47    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      48    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      49    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      50    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      51    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      52    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      53    kehujingyingbudb.ml_feature_info_yw_user_m       NaN          不可用          NaN                                                NaN       不参与自动衍生         NaN   
+                                      54                                        python       NaN             NaN          NaN                             days_roam / days_month                  NaN         NaN   
+                                      55    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      56    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      59    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN       不参与自动衍生         NaN   
+                                      60                                        python       NaN             NaN          NaN                             days_gprs / days_month                  NaN         NaN   
+                                      61    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN       不参与自动衍生         NaN   
+                                      62                                        python       NaN             NaN          NaN                             days_call / days_month                  NaN         NaN   
+                                      63                                        python       NaN             NaN          NaN                            days_call_p + days_gprs                  NaN         NaN   
+                                      64                                        python       NaN             NaN          NaN                          days_call_p_1 + days_gprs                  NaN         NaN   
+                                      65                                        python       NaN             NaN          NaN                          days_call_p_2 + days_gprs                  NaN         NaN   
+                                      66                                        python       NaN             NaN          NaN                          days_call_p_3 + days_gprs                  NaN          是   
+                                      67    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      68    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      69    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      70    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      71    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      72    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      73    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      74    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      75    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      76    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      77    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN          是   
+                                      78    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN          是   
+                                      79    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN          是   
+                                      80    kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN          是   
+                                      81                                        python       NaN             NaN          NaN  {'gprs_flow_video': 'video', 'gprs_flow_short'...                  NaN          是   
+                                      82                                        python       NaN             NaN          NaN                             (dinner, innet_months)                  NaN         NaN   
+                                      83  kehujingyingbudb.ml_feature_info_yw_user_day       NaN          不可用       不可用                                                NaN                  NaN         NaN   
+                                      84  kehujingyingbudb.ml_feature_info_yw_user_day       NaN          不可用       不可用                                                NaN                  NaN         NaN   
+                                      85  kehujingyingbudb.ml_feature_info_yw_user_day       NaN          不可用       不可用                                                NaN                  NaN         NaN   
+                                      86  kehujingyingbudb.ml_feature_info_yw_user_day       NaN          不可用       不可用                                                NaN                  NaN         NaN   
+                                      88     kehujingyingbudb.ml_target_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      89     kehujingyingbudb.ml_target_info_yw_user_m       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      90                          ml.table_score_month       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      91                                        python       NaN             NaN          NaN                              {'notago_tovalue': 1}                  NaN         NaN   
+                                      92                          ml.table_score_month       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      93                                        python       NaN             NaN          NaN                              {'notago_tovalue': 1}                  NaN         NaN   
+                                      94                                           sql       NaN             NaN          NaN                                                NaN       不参与自动衍生         NaN   
+                                      95  kehujingyingbudb.ml_feature_info_yw_user_day       NaN             NaN          NaN                                                NaN                  NaN         NaN   
+                                      
+                                         into_model is_cause  
+                                      0         NaN       否  
+                                      1        删除       否  
+                                      2        删除       否  
+                                      3         NaN       否  
+                                      4         NaN       否  
+                                      5         NaN       否  
+                                      6        删除       否  
+                                      7         NaN      NaN  
+                                      8         NaN      NaN  
+                                      9         NaN       否  
+                                      10        NaN      NaN  
+                                      11        NaN      NaN  
+                                      12        NaN      NaN  
+                                      13       删除       否  
+                                      14        NaN      NaN  
+                                      15        NaN      NaN  
+                                      16        NaN      NaN  
+                                      17        NaN      NaN  
+                                      18        NaN      NaN  
+                                      19        NaN      NaN  
+                                      20        NaN      NaN  
+                                      21        NaN      NaN  
+                                      22        NaN      NaN  
+                                      23        NaN      NaN  
+                                      24        NaN      NaN  
+                                      25        NaN      NaN  
+                                      26        NaN      NaN  
+                                      27        NaN      NaN  
+                                      28        NaN      NaN  
+                                      29        NaN      NaN  
+                                      30        NaN      NaN  
+                                      31        NaN      NaN  
+                                      32        NaN      NaN  
+                                      33        NaN      NaN  
+                                      34        NaN      NaN  
+                                      35        NaN      NaN  
+                                      36        NaN      NaN  
+                                      37        NaN      NaN  
+                                      38        NaN      NaN  
+                                      39        NaN      NaN  
+                                      40        NaN      NaN  
+                                      41        NaN      NaN  
+                                      42        NaN      NaN  
+                                      43        NaN      NaN  
+                                      44        NaN      NaN  
+                                      46        NaN      NaN  
+                                      47        NaN      NaN  
+                                      48        NaN      NaN  
+                                      49        NaN      NaN  
+                                      50        NaN      NaN  
+                                      51        NaN      NaN  
+                                      52        NaN      NaN  
+                                      53       删除      NaN  
+                                      54        NaN      NaN  
+                                      55        NaN      NaN  
+                                      56        NaN      NaN  
+                                      59       删除      NaN  
+                                      60        NaN      NaN  
+                                      61       删除      NaN  
+                                      62        NaN      NaN  
+                                      63        NaN      NaN  
+                                      64        NaN      NaN  
+                                      65        NaN      NaN  
+                                      66        NaN      NaN  
+                                      67        NaN      NaN  
+                                      68        NaN      NaN  
+                                      69        NaN      NaN  
+                                      70        NaN      NaN  
+                                      71        NaN      NaN  
+                                      72        NaN      NaN  
+                                      73        NaN      NaN  
+                                      74        NaN      NaN  
+                                      75        NaN      NaN  
+                                      76        NaN      NaN  
+                                      77        NaN      NaN  
+                                      78        NaN      NaN  
+                                      79        NaN      NaN  
+                                      80        NaN      NaN  
+                                      81        NaN      NaN  
+                                      82        NaN      NaN  
+                                      83        NaN      NaN  
+                                      84        NaN      NaN  
+                                      85        NaN      NaN  
+                                      86        NaN      NaN  
+                                      88       删除      NaN  
+                                      89       删除      NaN  
+                                      90       删除      NaN  
+                                      91        NaN      NaN  
+                                      92       删除      NaN  
+                                      93        NaN      NaN  
+                                      94       删除      NaN  
+                                      95        NaN      NaN  , condition="user_status='在网-正常' and \n    phone_no_null is null and\n    last_stop_date is not null and\n    innet_months >= 3", month_tabexp=202010, model_wd_traintest='./binaryclassify/eg/traintest~202010~202012', f_field_comment='./binaryclassify/eg/traintest~202010~202012/tabexp_col_obj~202010.pkl', col_del=['user_acct_month', 'rn'], table_train='./binaryclassify/eg/traintest~202010~202012/train_data~202010.csv', table_test='./binaryclassify/eg/traintest~202010~202012/test_data~202012.csv', freq_limit=0.95, unique_limit=5000, valuecount_limit=50, random_state=None, n_recent=3, auto_pair2=False, diff_limit=None, table_psi=True, table_r=True, col_mark=['user_acct_month', 'data_use', 'acct_month', 'user_id'])
+20220614-11:43:07  20220614-11:43:07  开始时间：2022-06-14 11:43:07
+20220614-11:43:07  20220614-11:43:07  ---- month: 202010
+20220614-11:43:07  20220614-11:43:07  ---- 参数设置：
+                                          ---- step: train
+                                          ---- Info.model_name: 模型示例
+                                          ---- Info.n_recent: 3
+                                          ---- Info.Pcase_limit: 1000
+                                          ---- Info.traintable_ratio: 2
+                                          ---- Info.Pcumsum_limit: 2
+                                          ---- Info.timein_count: 500
+
+                                      ------------------------------------- 检查各前置表 --------------------------------------------------- 
+20220614-11:43:07  20220614-11:43:07  检查 kehujingyingbudb.ml_xy_eg_m
+
+
+
+
+Traceback (most recent call last):
+  File "D:\Python for Windows\lib\site-packages\IPython\core\interactiveshell.py", line 3296, in run_code
+    exec(code_obj, self.user_global_ns, self.user_ns)
+  File "<ipython-input-27-542d49823be3>", line 1, in <module>
+    base_train[model_name], Info = privy_basedatafun('train', Info, nmg_yaxin=nmg_yaxin)
+  File "D:\工作\模型脚本\ModelProject\selfmodule\tablemodule\tablefun.py", line 668, in privy_basedatafun
+    field_all = get_field(Info.table_XY).index
+  File "D:\工作\模型脚本\ModelProject\selfmodule\toolmodule\datatrans.py", line 356, in get_field
+    field = my_sql_fun(sql, method='read', index_col='col_name').data_type
+  File "D:\工作\模型脚本\ModelProject\selfmodule\toolmodule\datatrans.py", line 232, in my_sql_fun
+    conn1 = psycopg2.connect(dbname=dbname, user=user, password=pwd, port=port, host=host, client_encoding='UTF-8')
+  File "D:\Python for Windows\lib\site-packages\psycopg2\__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError
+20220614-11:43:43  20220614-11:43:43  开始时间：2022-06-14 11:43:43
+                                      Out[31]: 20220614-11:43:48  20220614-11:43:48  'text'
+                                      Out[33]: 20220614-11:43:59  20220614-11:43:59  202010
+20220614-11:44:07  20220614-11:44:07  ---- month: 202010
+                                      Out[36]: 20220614-11:44:13  20220614-11:44:13  '数值型'
+  File "<ipython-input-37-7bf93c675996>", line 1
+    f (type_col_month == '类别型') & (not isinstance(month, str)):
+                                                               ^
+SyntaxError: invalid syntax
+
+20220614-11:44:31  20220614-11:44:31  ---- 参数设置：
+                                          ---- step: train
+                                          ---- Info.model_name: 模型示例
+                                          ---- Info.n_recent: 3
+                                          ---- Info.Pcase_limit: 1000
+                                          ---- Info.traintable_ratio: 2
+                                          ---- Info.Pcumsum_limit: 2
+                                          ---- Info.timein_count: 500
+
+                                      ------------------------------------- 检查各前置表 --------------------------------------------------- 
+20220614-11:46:49  20220614-11:46:49  检查 kehujingyingbudb.ml_xy_eg_m
+
+
+
+
+Traceback (most recent call last):
+  File "D:\Python for Windows\lib\site-packages\IPython\core\interactiveshell.py", line 3296, in run_code
+    exec(code_obj, self.user_global_ns, self.user_ns)
+  File "<ipython-input-44-70420b91e2e6>", line 4, in <module>
+    field_all = get_field(Info.table_XY).index
+  File "D:\工作\模型脚本\ModelProject\selfmodule\toolmodule\datatrans.py", line 356, in get_field
+    field = my_sql_fun(sql, method='read', index_col='col_name').data_type
+  File "D:\工作\模型脚本\ModelProject\selfmodule\toolmodule\datatrans.py", line 232, in my_sql_fun
+    conn1 = psycopg2.connect(dbname=dbname, user=user, password=pwd, port=port, host=host, client_encoding='UTF-8')
+  File "D:\Python for Windows\lib\site-packages\psycopg2\__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError
+                                      Out[45]: 20220614-11:47:08  20220614-11:47:08  'kehujingyingbudb.ml_xy_eg_m'
+                                      Out[46]: 20220614-11:48:00  20220614-11:48:00  
+                                               model_name month_train month_test Pcase_limit traintable_ratio Pcumsum_limit timein_count timeout_limit trainproc_ratiolist iv_limit r_limit marketlevel short_name  \
+                                      模型示例   模型示例      202010     202012        1000                2             2          500          1000          [1, 2, 10]     0.05    0.95           1         eg   
+                                      
+                                                                   table_XY s_field_base  ...                              dict_sortscore score_targetnull                                         field_base  \
+                                      模型示例  kehujingyingbudb.ml_xy_eg_m    s_yw_fake  ...  {'sms_cnt': True, 'call_fee_local': False}            Ncase                       field_name               ...   
+                                      
+                                                                                            condition month_tabexp                           model_wd_traintest                                    f_field_comment  \
+                                      模型示例  user_status='在网-正常' and \n    phone_no_null is...       202010  ./binaryclassify/eg/traintest~202010~202012  ./binaryclassify/eg/traintest~202010~202012/ta...   
+                                      
+                                                              col_del                                        table_train                                         table_test freq_limit unique_limit valuecount_limit  \
+                                      模型示例  [user_acct_month, rn]  ./binaryclassify/eg/traintest~202010~202012/tr...  ./binaryclassify/eg/traintest~202010~202012/te...       0.95         5000               50   
+                                      
+                                               random_state n_recent  
+                                      模型示例         None        3  
+                                      
+                                      [1 rows x 41 columns]
+20220614-15:10:47  20220614-15:10:47  
+                                      ---- 加工：移网基础宽表_用户to套餐组
+
+
+
+
+Traceback (most recent call last):
+  File "D:\Python for Windows\lib\site-packages\IPython\core\interactiveshell.py", line 3296, in run_code
+    exec(code_obj, self.user_global_ns, self.user_ns)
+  File "<ipython-input-47-3527122dda0d>", line 2, in <module>
+    for month in month_list:
+NameError: name 'month_list' is not defined
+20220614-15:10:56  20220614-15:10:56  
+                                      ---- 加工：移网基础宽表_用户to套餐组
+20220614-15:10:56  20220614-15:10:56  ----------------------------- 202203 ---------------------------------
+20220614-15:10:57  20220614-15:10:57   
+                                      insert overwrite table kehujingyingbudb.dm_zc_yw_moxing_team_info_m partition (acct_month='202203')
+                                      select month_id, zk_user_no,
+                                      max(case when is_dupety='0' then user_no else null end) user_no_teamzk,
+                                      max(case when is_dupety='0' then acct_id else null end) acct_id_teamzk,
+                                      max(case when is_dupety='0' then customer_no else null end) customer_no_teamzk,
+                                      max(case when is_dupety='0' then dev_channel_nbr else null end) dev_channel_nbr_teamzk,
+                                      max(case when is_dupety='0' then dev_channel_name else null end) dev_channel_name_teamzk,
+                                      max(case when is_dupety='0' then open_date else null end) open_date_teamzk,
+                                      max(case when is_dupety='0' then open_months else null end) open_months_teamzk,
+                                      max(case when is_dupety='0' then cert_type else null end) cert_type_teamzk,
+                                      max(case when is_dupety='0' then cert_nbr else null end) cert_nbr_teamzk,
+                                      max(case when is_dupety='0' then area_no else null end) area_no_teamzk,
+                                      max(case when is_dupety='0' then city_no else null end) city_no_teamzk,
+                                      max(case when is_dupety='0' then is_village else null end) is_village_teamzk,
+                                      max(case when is_dupety='0' then age else null end) age_teamzk,
+                                      max(case when is_dupety='0' then sex else null end) sex_teamzk,
+                                      max(case when is_dupety='0' then is_valid else null end) is_valid_teamzk,
+                                      max(case when is_dupety='0' then std_user_status_name else null end) std_user_status_name_teamzk,
+                                      sum(coalesce(stop_times, 0)) stop_times_teamadd,
+                                      max(case when is_dupety='0' then resent_stop_date else null end) resent_stop_date_teammax,
+                                      max(case when is_dupety='0' then is_acct else null end) is_acct_teamzk,
+                                      max(case when is_dupety='0' then payment_mode_cd else null end) payment_mode_cd_teamzk,
+                                      max(case when is_dupety='0' then is_real_name else null end) is_real_name_teamzk,
+                                      max(case when is_dupety='0' then is_gz else null end) is_gz_teamzk,
+                                      max(case when is_dupety='0' then is_xy else null end) is_xy_teamzk,
+                                      max(case when is_dupety='0' then is_gov else null end) is_gov_teamzk,
+                                      max(case when is_dupety='0' then is_grp_member else null end) is_grp_member_teamzk,
+                                      max(case when is_dupety='0' then is_hlwk else null end) is_hlwk_teamzk,
+                                      max(case when is_dupety='0' then is_sw else null end) is_sw_teamzk,
+                                      max(case when is_dupety='0' then is_red_list else null end) is_red_list_teamzk,
+                                      max(case when is_dupety='0' then is_5g_main_offer else null end) is_5g_main_offer_teamzk,
+                                      max(case when is_dupety='0' then is_5g_upgrade_offer else null end) is_5g_upgrade_offer_teamzk,
+                                      max(case when is_dupety='0' then is_fq else null end) is_fq_teamzk,
+                                      max(case when is_dupety='0' then is_usim else null end) is_usim_teamzk,
+                                      max(case when is_dupety='0' then tyaddresscode else null end) tyaddresscode_teamzk,
+                                      max(case when is_dupety='0' then tyaddressname else null end) tyaddressname_teamzk,
+                                      max(case when is_dupety='0' then shentoulv else null end) shentoulv_teamzk,
+                                      max(case when is_dupety='0' then family_form_ersj else null end) family_form_ersj_teamzk,
+                                      max(case when is_dupety='0' then family_form_skzj else null end) family_form_skzj_teamzk,
+                                      max(case when is_dupety='0' then family_form_unknown else null end) family_form_unknown_teamzk,
+                                      max(case when is_dupety='0' then family_prop_child else null end) family_prop_child_teamzk,
+                                      max(case when is_dupety='0' then family_prop_elder else null end) family_prop_elder_teamzk,
+                                      max(case when is_dupety='0' then family_prop_unknown else null end) family_prop_unknown_teamzk,
+                                      max(case when is_dupety='0' then family_type else null end) family_type_teamzk,
+                                      max(case when is_dupety='0' then sig_offer_spec_id else null end) sig_offer_spec_id_teamzk,
+                                      max(case when is_dupety='0' then sig_offer_spec_name else null end) sig_offer_spec_name_teamzk,
+                                      max(case when is_dupety='0' then sig_offer_create_dt else null end) sig_offer_create_dt_teamzk,
+                                      max(case when is_dupety='0' then comp_offer_spec_id else null end) comp_offer_spec_id_teamzk,
+                                      max(case when is_dupety='0' then comp_offer_spec_name else null end) comp_offer_spec_name_teamzk,
+                                      max(case when is_dupety='0' then comp_offer_create_dt else null end) comp_offer_create_dt_teamzk,
+                                      max(case when is_dupety='0' then is_dupety else null end) is_dupety_teamzk,
+                                      max(case when is_dupety='0' then fk_num else null end) fk_num_teamzk,
+                                      max(case when is_dupety='0' then prod_spec_fee else null end) prod_spec_fee_teamzk,
+                                      max(case when is_dupety='0' then prod_spec_fluw else null end) prod_spec_fluw_teamzk,
+                                      max(case when is_dupety='0' then prod_spec_dur else null end) prod_spec_dur_teamzk,
+                                      sum(coalesce(mbl_inner_fluw, 0)) mbl_inner_fluw_teamadd,
+                                      sum(coalesce(dialing_inner, 0)) dialing_inner_teamadd,
+                                      max(case when is_dupety='0' then is_comp else null end) is_comp_teamzk,
+                                      max(case when is_dupety='0' then comp_user_no else null end) comp_user_no_teamzk,
+                                      max(case when is_dupety='0' then comp_eff_date else null end) comp_eff_date_teamzk,
+                                      max(case when is_dupety='0' then comp_exp_date else null end) comp_exp_date_teamzk,
+                                      max(case when is_dupety='0' then comp_type else null end) comp_type_teamzk,
+                                      max(case when is_dupety='0' then comp_num else null end) comp_num_teamzk,
+                                      max(case when is_dupety='0' then comp_kd_num else null end) comp_kd_num_teamzk,
+                                      max(case when is_dupety='0' then comp_yd_num else null end) comp_yd_num_teamzk,
+                                      max(case when is_dupety='0' then comp_hd_num else null end) comp_hd_num_teamzk,
+                                      max(case when is_dupety='0' then comp_wf_num else null end) comp_wf_num_teamzk,
+                                      max(case when is_dupety='0' then comp_kj_num else null end) comp_kj_num_teamzk,
+                                      max(case when is_dupety='0' then is_agre else null end) is_agre_teamzk,
+                                      max(case when is_dupety='0' then track_eff_date else null end) track_eff_date_teamzk,
+                                      max(case when is_dupety='0' then track_exp_date else null end) track_exp_date_teamzk,
+                                      sum(coalesce(pack_hd_num, 0)) pack_hd_num_teamadd,
+                                      sum(coalesce(pack_dur_num, 0)) pack_dur_num_teamadd,
+                                      sum(coalesce(pack_flow_num, 0)) pack_flow_num_teamadd,
+                                      sum(coalesce(pack_flow_sum, 0)) pack_flow_sum_teamadd,
+                                      sum(coalesce(pack_dur_sum, 0)) pack_dur_sum_teamadd,
+                                      sum(coalesce(pack_month_flow_num, 0)) pack_month_flow_num_teamadd,
+                                      sum(coalesce(pack_month_flow_sum, 0)) pack_month_flow_sum_teamadd,
+                                      sum(coalesce(pack_month_flow_num_m, 0)) pack_month_flow_num_m_teamadd,
+                                      sum(coalesce(pack_month_flow_sum_m, 0)) pack_month_flow_sum_m_teamadd,
+                                      max(case when is_dupety='0' then pack_month_flow_exp_date else null end) pack_month_flow_exp_date_teamzk,
+                                      sum(coalesce(pack_directed_num, 0)) pack_directed_num_teamadd,
+                                      sum(coalesce(pack_directed_sum, 0)) pack_directed_sum_teamadd,
+                                      sum(coalesce(pack_directed_num_m, 0)) pack_directed_num_m_teamadd,
+                                      sum(coalesce(pack_directed_sum_m, 0)) pack_directed_sum_m_teamadd,
+                                      max(case when is_dupety='0' then pack_directed_exp_date else null end) pack_directed_exp_date_teamzk,
+                                      sum(coalesce(pack_5g_internet_num, 0)) pack_5g_internet_num_teamadd,
+                                      sum(coalesce(pack_5g_internet_free_num, 0)) pack_5g_internet_free_num_teamadd,
+                                      sum(coalesce(pack_5g_internet_sum, 0)) pack_5g_internet_sum_teamadd,
+                                      sum(coalesce(pack_5g_internet_num_m, 0)) pack_5g_internet_num_m_teamadd,
+                                      sum(coalesce(pack_5g_internet_free_num_m, 0)) pack_5g_internet_free_num_m_teamadd,
+                                      sum(coalesce(pack_5g_internet_sum_m, 0)) pack_5g_internet_sum_m_teamadd,
+                                      max(case when is_dupety='0' then pack_5g_internet_exp_date else null end) pack_5g_internet_exp_date_teamzk,
+                                      sum(coalesce(pack_spcl_num, 0)) pack_spcl_num_teamadd,
+                                      sum(coalesce(pack_spcl_free_num, 0)) pack_spcl_free_num_teamadd,
+                                      sum(coalesce(pack_spcl_num_m, 0)) pack_spcl_num_m_teamadd,
+                                      sum(coalesce(pack_spcl_free_num_m, 0)) pack_spcl_free_num_m_teamadd,
+                                      max(case when is_dupety='0' then pack_spcl_exp_date else null end) pack_spcl_exp_date_teamzk,
+                                      max(case when is_dupety='0' then pack_spcl_6_month else null end) pack_spcl_6_month_teammax,
+                                      max(case when is_dupety='0' then is_hy_or_hb else null end) is_hy_or_hb_teamzk,
+                                      max(case when is_dupety='0' then point else null end) point_teamzk,
+                                      max(case when is_dupety='0' then star else null end) star_teamzk,
+                                      max(case when is_dupety='0' then basic_credit else null end) basic_credit_teamzk,
+                                      max(case when is_dupety='0' then quota else null end) quota_teamzk,
+                                      max(case when is_dupety='0' then is_lh else null end) is_lh_teamzk,
+                                      max(case when is_dupety='0' then lh_type else null end) lh_type_teamzk,
+                                      max(case when is_dupety='0' then is_bxl else null end) is_bxl_teamzk,
+                                      max(case when is_dupety='0' then bxl_flow_step else null end) bxl_flow_step_teamzk,
+                                      max(case when is_dupety='0' then bxl_deal_times else null end) bxl_deal_times_teamzk,
+                                      max(case when is_dupety='0' then is_deal_bxl else null end) is_deal_bxl_teamzk,
+                                      max(case when is_dupety='0' then pack_bxl_num else null end) pack_bxl_num_teamzk,
+                                      max(case when is_dupety='0' then owe_flag else null end) owe_flag_teamzk,
+                                      sum(coalesce(owe_charge, 0)) owe_charge_teamadd,
+                                      sum(coalesce(owe_times, 0)) owe_times_teamadd,
+                                      max(case when is_dupety='0' then last_owe_month else null end) last_owe_month_teammax,
+                                      max(case when is_dupety='0' then last_owe_charge else null end) last_owe_charge_teamzk,
+                                      sum(coalesce(owe_charge_acct, 0)) owe_charge_acct_teamadd,
+                                      sum(coalesce(payment_cnt, 0)) payment_cnt_teamadd,
+                                      sum(coalesce(payment_charge, 0)) payment_charge_teamadd,
+                                      max(case when is_dupety='0' then payment_time else null end) payment_time_teammax,
+                                      max(case when is_dupety='0' then payment_fee else null end) payment_fee_teamzk,
+                                      sum(coalesce(balance, 0)) balance_teamadd,
+                                      sum(coalesce(arpu, 0)) arpu_teamadd,
+                                      sum(coalesce(call_fee, 0)) call_fee_teamadd,
+                                      sum(coalesce(call_local_fee, 0)) call_local_fee_teamadd,
+                                      sum(coalesce(call_long_prov_fee, 0)) call_long_prov_fee_teamadd,
+                                      sum(coalesce(call_roam_fee, 0)) call_roam_fee_teamadd,
+                                      sum(coalesce(flux_fee, 0)) flux_fee_teamadd,
+                                      sum(coalesce(sms_fee, 0)) sms_fee_teamadd,
+                                      max(case when is_dupety='0' then rgst_tmn_no else null end) rgst_tmn_no_teamzk,
+                                      max(case when is_dupety='0' then rgst_tmn_brand else null end) rgst_tmn_brand_teamzk,
+                                      max(case when is_dupety='0' then rgst_tmn_model else null end) rgst_tmn_model_teamzk,
+                                      max(case when is_dupety='0' then rgst_tmn_type else null end) rgst_tmn_type_teamzk,
+                                      max(case when is_dupety='0' then rgst_tmn_time else null end) rgst_tmn_time_teamzk,
+                                      max(case when is_dupety='0' then rgst_tmn_flag else null end) rgst_tmn_flag_teamzk,
+                                      max(case when is_dupety='0' then phone_price else null end) phone_price_teamzk,
+                                      max(case when is_dupety='0' then operating_sys else null end) operating_sys_teamzk,
+                                      max(case when is_dupety='0' then market_time else null end) market_time_teamzk,
+                                      max(case when is_dupety='0' then prd_position else null end) prd_position_teamzk,
+                                      max(case when is_dupety='0' then screens_nbr else null end) screens_nbr_teamzk,
+                                      max(case when is_dupety='0' then main_screen_size else null end) main_screen_size_teamzk,
+                                      max(case when is_dupety='0' then baseband_chip_clocked else null end) baseband_chip_clocked_teamzk,
+                                      max(case when is_dupety='0' then resolution else null end) resolution_teamzk,
+                                      max(case when is_dupety='0' then ram else null end) ram_teamzk,
+                                      max(case when is_dupety='0' then main_camera else null end) main_camera_teamzk,
+                                      max(case when is_dupety='0' then start_use_time else null end) start_use_time_teamzk,
+                                      max(case when is_dupety='0' then end_use_time else null end) end_use_time_teamzk,
+                                      max(case when is_dupety='0' then usage_days else null end) usage_days_teamzk,
+                                      max(case when is_dupety='0' then usage_days_sum else null end) usage_days_sum_teamzk,
+                                      max(case when is_dupety='0' then is_in_use else null end) is_in_use_teamzk,
+                                      max(case when is_dupety='0' then is_new_tmn else null end) is_new_tmn_teamzk,
+                                      max(case when is_dupety='0' then rgst_tmn_brand_1 else null end) rgst_tmn_brand_1_teamzk,
+                                      max(case when is_dupety='0' then rgst_tmn_model_1 else null end) rgst_tmn_model_1_teamzk,
+                                      max(case when is_dupety='0' then rgst_tmn_type_1 else null end) rgst_tmn_type_1_teamzk,
+                                      max(case when is_dupety='0' then rgst_tmn_time_1 else null end) rgst_tmn_time_1_teamzk,
+                                      max(case when is_dupety='0' then rgst_tmn_flag_1 else null end) rgst_tmn_flag_1_teamzk,
+                                      max(case when is_dupety='0' then phone_price_1 else null end) phone_price_1_teamzk,
+                                      max(case when is_dupety='0' then operating_sys_1 else null end) operating_sys_1_teamzk,
+                                      max(case when is_dupety='0' then market_time_1 else null end) market_time_1_teamzk,
+                                      max(case when is_dupety='0' then prd_position_1 else null end) prd_position_1_teamzk,
+                                      max(case when is_dupety='0' then screens_nbr_1 else null end) screens_nbr_1_teamzk,
+                                      max(case when is_dupety='0' then main_screen_size_1 else null end) main_screen_size_1_teamzk,
+                                      max(case when is_dupety='0' then baseband_chip_clocked_1 else null end) baseband_chip_clocked_1_teamzk,
+                                      max(case when is_dupety='0' then resolution_1 else null end) resolution_1_teamzk,
+                                      max(case when is_dupety='0' then ram_1 else null end) ram_1_teamzk,
+                                      max(case when is_dupety='0' then main_camera_1 else null end) main_camera_1_teamzk,
+                                      max(case when is_dupety='0' then start_use_time_1 else null end) start_use_time_1_teamzk,
+                                      max(case when is_dupety='0' then end_use_time_1 else null end) end_use_time_1_teamzk,
+                                      max(case when is_dupety='0' then usage_days_1 else null end) usage_days_1_teamzk,
+                                      max(case when is_dupety='0' then usage_days_sum_1 else null end) usage_days_sum_1_teamzk,
+                                      max(case when is_dupety='0' then is_new_tmn_1 else null end) is_new_tmn_1_teamzk,
+                                      max(case when is_dupety='0' then rgst_tmn_brand_2 else null end) rgst_tmn_brand_2_teamzk,
+                                      max(case when is_dupety='0' then rgst_tmn_model_2 else null end) rgst_tmn_model_2_teamzk,
+                                      max(case when is_dupety='0' then rgst_tmn_type_2 else null end) rgst_tmn_type_2_teamzk,
+                                      max(case when is_dupety='0' then rgst_tmn_time_2 else null end) rgst_tmn_time_2_teamzk,
+                                      max(case when is_dupety='0' then rgst_tmn_flag_2 else null end) rgst_tmn_flag_2_teamzk,
+                                      max(case when is_dupety='0' then phone_price_2 else null end) phone_price_2_teamzk,
+                                      max(case when is_dupety='0' then operating_sys_2 else null end) operating_sys_2_teamzk,
+                                      max(case when is_dupety='0' then market_time_2 else null end) market_time_2_teamzk,
+                                      max(case when is_dupety='0' then prd_position_2 else null end) prd_position_2_teamzk,
+                                      max(case when is_dupety='0' then screens_nbr_2 else null end) screens_nbr_2_teamzk,
+                                      max(case when is_dupety='0' then main_screen_size_2 else null end) main_screen_size_2_teamzk,
+                                      max(case when is_dupety='0' then baseband_chip_clocked_2 else null end) baseband_chip_clocked_2_teamzk,
+                                      max(case when is_dupety='0' then resolution_2 else null end) resolution_2_teamzk,
+                                      max(case when is_dupety='0' then ram_2 else null end) ram_2_teamzk,
+                                      max(case when is_dupety='0' then main_camera_2 else null end) main_camera_2_teamzk,
+                                      max(case when is_dupety='0' then start_use_time_2 else null end) start_use_time_2_teamzk,
+                                      max(case when is_dupety='0' then end_use_time_2 else null end) end_use_time_2_teamzk,
+                                      max(case when is_dupety='0' then usage_days_2 else null end) usage_days_2_teamzk,
+                                      max(case when is_dupety='0' then usage_days_sum_2 else null end) usage_days_sum_2_teamzk,
+                                      max(case when is_dupety='0' then is_new_tmn_2 else null end) is_new_tmn_2_teamzk,
+                                      max(case when is_dupety='0' then is_shaungka else null end) is_shaungka_teamzk,
+                                      max(case when is_dupety='0' then shaungka_type else null end) shaungka_type_teamzk,
+                                      sum(coalesce(dur, 0)) dur_teamadd,
+                                      sum(coalesce(calling_dur, 0)) calling_dur_teamadd,
+                                      sum(coalesce(called_dur, 0)) called_dur_teamadd,
+                                      sum(coalesce(cnt, 0)) cnt_teamadd,
+                                      sum(coalesce(calling_cnt, 0)) calling_cnt_teamadd,
+                                      sum(coalesce(called_cnt, 0)) called_cnt_teamadd,
+                                      sum(coalesce(roam_dur, 0)) roam_dur_teamadd,
+                                      sum(coalesce(roam_cnt, 0)) roam_cnt_teamadd,
+                                      sum(coalesce(roam_out_dur, 0)) roam_out_dur_teamadd,
+                                      sum(coalesce(roam_dmstc_dur, 0)) roam_dmstc_dur_teamadd,
+                                      sum(coalesce(local_dur, 0)) local_dur_teamadd,
+                                      max(case when is_dupety='0' then call_days else null end) call_days_teammax,
+                                      max(case when is_dupety='0' then calling_days else null end) calling_days_teammax,
+                                      max(case when is_dupety='0' then called_days else null end) called_days_teammax,
+                                      max(case when is_dupety='0' then roam_out_days else null end) roam_out_days_teammax,
+                                      max(case when is_dupety='0' then roam_dmstc_days else null end) roam_dmstc_days_teammax,
+                                      max(case when is_dupety='0' then local_days else null end) local_days_teammax,
+                                      sum(coalesce(ct_dur, 0)) ct_dur_teamadd,
+                                      sum(coalesce(wj_dur, 0)) wj_dur_teamadd,
+                                      sum(coalesce(ct_calling_dur, 0)) ct_calling_dur_teamadd,
+                                      sum(coalesce(ct_cnt, 0)) ct_cnt_teamadd,
+                                      sum(coalesce(ct_calling_cnt, 0)) ct_calling_cnt_teamadd,
+                                      sum(coalesce(wj_calling_dur, 0)) wj_calling_dur_teamadd,
+                                      sum(coalesce(wj_cnt, 0)) wj_cnt_teamadd,
+                                      sum(coalesce(wj_calling_cnt, 0)) wj_calling_cnt_teamadd,
+                                      sum(coalesce(jwq_num, 0)) jwq_num_teamadd,
+                                      sum(coalesce(jwq_ct_num, 0)) jwq_ct_num_teamadd,
+                                      sum(coalesce(jwq_wj_num, 0)) jwq_wj_num_teamadd,
+                                      sum(coalesce(jwq_calling_num, 0)) jwq_calling_num_teamadd,
+                                      sum(coalesce(jwq_ct_calling_num, 0)) jwq_ct_calling_num_teamadd,
+                                      sum(coalesce(jwq_wj_calling_num, 0)) jwq_wj_calling_num_teamadd,
+                                      sum(coalesce(jwq_called_num, 0)) jwq_called_num_teamadd,
+                                      sum(coalesce(jwq_ct_called_num, 0)) jwq_ct_called_num_teamadd,
+                                      sum(coalesce(jwq_wj_called_num, 0)) jwq_wj_called_num_teamadd,
+                                      sum(coalesce(data_flux, 0)) data_flux_teamadd,
+                                      max(case when is_dupety='0' then last_to_acct_flux else null end) last_to_acct_flux_teamzk,
+                                      sum(coalesce(acct_to_next_flux, 0)) acct_to_next_flux_teamadd,
+                                      sum(coalesce(flux_5g, 0)) flux_5g_teamadd,
+                                      sum(coalesce(flux_4g, 0)) flux_4g_teamadd,
+                                      sum(coalesce(flux_3g, 0)) flux_3g_teamadd,
+                                      sum(coalesce(flux_2g, 0)) flux_2g_teamadd,
+                                      sum(coalesce(int_flux, 0)) int_flux_teamadd,
+                                      sum(coalesce(dmstc_flux, 0)) dmstc_flux_teamadd,
+                                      max(case when is_dupety='0' then flux_days else null end) flux_days_teammax,
+                                      max(case when is_dupety='0' then int_flux_days else null end) int_flux_days_teammax,
+                                      max(case when is_dupety='0' then dmstc_flux_days else null end) dmstc_flux_days_teammax,
+                                      sum(coalesce(normal_flux, 0)) normal_flux_teamadd,
+                                      max(case when is_dupety='0' then normal_flux_days else null end) normal_flux_days_teammax,
+                                      sum(coalesce(night_flux, 0)) night_flux_teamadd,
+                                      max(case when is_dupety='0' then night_flux_days else null end) night_flux_days_teammax,
+                                      sum(coalesce(weekday_flux_avg, 0)) weekday_flux_avg_teamadd,
+                                      sum(coalesce(weekend_flux_avg, 0)) weekend_flux_avg_teamadd,
+                                      sum(coalesce(sx_flux_avg, 0)) sx_flux_avg_teamadd,
+                                      sum(coalesce(zx_flux_avg, 0)) zx_flux_avg_teamadd,
+                                      sum(coalesce(xx_flux_avg, 0)) xx_flux_avg_teamadd,
+                                      sum(coalesce(mbl_out_flow, 0)) mbl_out_flow_teamadd,
+                                      sum(coalesce(sms_cnt, 0)) sms_cnt_teamadd,
+                                      sum(coalesce(sms_send_cnt, 0)) sms_send_cnt_teamadd,
+                                      sum(coalesce(sms_recv_cnt, 0)) sms_recv_cnt_teamadd,
+                                      sum(coalesce(self_scs_cnt, 0)) self_scs_cnt_teamadd,
+                                      sum(coalesce(self_scs_tsbz_cnt, 0)) self_scs_tsbz_cnt_teamadd,
+                                      sum(coalesce(call_turn_cnt, 0)) call_turn_cnt_teamadd
+                                      from kehujingyingbudb.dm_zc_yw_moxing_info_m where acct_month='202203' -- and is_valid='1'
+                                      group by month_id, zk_user_no
+
+
+
+
+Traceback (most recent call last):
+  File "D:\Python for Windows\lib\site-packages\IPython\core\interactiveshell.py", line 3296, in run_code
+    exec(code_obj, self.user_global_ns, self.user_ns)
+  File "<ipython-input-49-7c2cd18a571e>", line 8, in <module>
+    my_sql_fun(team_summary, method='execute')
+  File "D:\工作\模型脚本\ModelProject\selfmodule\toolmodule\datatrans.py", line 232, in my_sql_fun
+    conn1 = psycopg2.connect(dbname=dbname, user=user, password=pwd, port=port, host=host, client_encoding='UTF-8')
+  File "D:\Python for Windows\lib\site-packages\psycopg2\__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)

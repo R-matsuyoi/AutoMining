@@ -1,0 +1,1812 @@
+
+                   ###################################################################### 加工训练账期近n月基础数据
+                    
+20220620-14:40:01  开始时间：2022-06-20 14:40:01
+20220620-14:40:01  ---- month: 202010
+20220620-14:40:01  ---- 参数设置：
+                       ---- step: train
+                       ---- Info.model_name: 模型示例
+                       ---- Info.n_recent: 3
+                       ---- Info.Pcase_limit: 1000
+                       ---- Info.traintable_ratio: 2
+                       ---- Info.Pcumsum_limit: 2
+                       ---- Info.timein_count: 500
+
+                   ------------------------------------- 检查各前置表 --------------------------------------------------- 
+20220620-14:40:01  检查 kehujingyingbudb.ml_xy_eg_m
+20220620-14:40:01      78 列
+20220620-14:40:01      202010账期： 15000行
+20220620-14:40:01      202009账期： 18000行
+20220620-14:40:01      202008账期： 10000行
+
+
+20220620-14:40:01  正负例分布：select cast(flag_eg as text) flag_eg, count(1) from kehujingyingbudb.ml_xy_eg_m  group by flag_eg
+20220620-14:40:01      dis_train_total: {'count': 68000, 'Pcount': 8036, 'prop': 0.118}
+
+
+
+20220620-14:40:01  ---- 建表语句（限定202010账期当月目标用户）：
+                       drop table if exists kehujingyingbudb.mid_eg_model_train_202010;
+                       select pg_sleep(5);
+                       create  table kehujingyingbudb.mid_eg_model_train_202010 as 
+                       select acct_month, user_id, flag_eg ,row_number() over(order by acct_month desc, random()) rnself 
+                       from kehujingyingbudb.ml_xy_eg_m
+                       where acct_month>=202008 and acct_month<=202010 and user_status='在网-正常' and 
+                           phone_no_null is null and
+                           last_stop_date is not null and
+                           innet_months >= 3 and flag_eg is not null;
+20220620-14:40:07      sql执行完毕
+20220620-14:40:07  统计kehujingyingbudb.mid_eg_model_train_202010行列数
+20220620-14:40:07      行数：{'202009': 15048, '202010': 12449}
+                       列数：4
+
+
+20220620-14:40:07  ---- 建表语句（划分训练/验证数据集）：
+                       drop table if exists kehujingyingbudb.mid_eg_user_train_202010;
+                       create  table kehujingyingbudb.mid_eg_user_train_202010 as 
+                       (select acct_month user_acct_month, 'data_timein' data_use, * from kehujingyingbudb.mid_eg_model_train_202010 where rnself <= 500)
+                       union all
+                       (select acct_month user_acct_month, 'data_train'  data_use, * from kehujingyingbudb.mid_eg_model_train_202010 where rnself > 500 and flag_eg=1 order by rnself limit 1000)
+                       union all
+                       (select acct_month user_acct_month, 'data_train'  data_use, * from kehujingyingbudb.mid_eg_model_train_202010 where rnself > 500 and flag_eg=0 order by rnself limit 2000) ;
+20220620-14:40:07      sql执行完毕
+20220620-14:40:07  正负例分布：select cast(flag_eg as text) flag_eg, count(1) from kehujingyingbudb.mid_eg_user_train_202010  group by flag_eg
+20220620-14:40:07      dis_train_sample {'count': 3500, 'Pcount': 1074, 'prop': 0.307}
+
+
+
+20220620-14:40:07  ---- 关联近n月数据：
+                       drop table if exists kehujingyingbudb.mid_eg_recent_train_202010;
+                       create  table kehujingyingbudb.mid_eg_recent_train_202010 as
+                       select user_acct_month, data_use, acct_month, phone_no_null, phone_no_tm, user_id, dinner_id, account_id, innet_date, innet_months, age, sex, age_add, sex_add, user_status, last_stop_date, dinner, dinner_fee, gprs_last_defer, gprs_resource, gprs_now_rest, call_use, if_nolimit, if_5g_dinner, if_5g_term, if_jt, start_level, cred_type, if_cred_multi, arpu, pay_cnt, pay_fee, acct_balance, term_model, term_brand, term_type, sk_type, if_new_term, calling_cnt, calling_dura, called_cnt, called_dura, calling_diff_cnt, calling_diff_dura, gprs_flow, gprs_flow_4g, gprs_flow_5g, gprs_flow_busy, gprs_flow_idle, gprs_now_defer, gprs_flow_roam, call_dura_roam, days_roam, gprs_flow_gat, days_gat, days_gprs, days_call, nos_call, nos_calling, nos_calling_diff, sms_cnt, call_fee_local, call_fee_roam, gprs_income, gprs_fee, call_fee, gprs_flow_video, gprs_flow_short, gprs_flow_music, gprs_flow_commu, gprs_flow_game, dayvalue_calling_dura, dayvalue_gprs_flow, dayvalue_user_status, dayvalue_phone_no_null, flag_eg, score_flag_eg, score_flag_eg2 
+                       from (
+                       select a.user_acct_month, a.data_use, b.*
+                       from (select * from kehujingyingbudb.mid_eg_user_train_202010 where data_use='data_timein') a
+                       inner join (select * from kehujingyingbudb.ml_xy_eg_m where acct_month>=202008 and acct_month<=202010) b on a.user_id = b.user_id
+                       union all 
+                       select a.user_acct_month, a.data_use, b.*
+                       from (select * from kehujingyingbudb.mid_eg_user_train_202010 where data_use='data_train' and acct_month=202008) a
+                       inner join (select * from kehujingyingbudb.ml_xy_eg_m where acct_month>=202006 and acct_month<=202008) b on a.user_id = b.user_id
+                       union all
+                       select a.user_acct_month, a.data_use, b.*
+                       from (select * from kehujingyingbudb.mid_eg_user_train_202010 where data_use='data_train' and acct_month=202009) a
+                       inner join (select * from kehujingyingbudb.ml_xy_eg_m where acct_month>=202007 and acct_month<=202009) b on a.user_id = b.user_id
+                       union all
+                       select a.user_acct_month, a.data_use, b.*
+                       from (select * from kehujingyingbudb.mid_eg_user_train_202010 where data_use='data_train' and acct_month=202010) a
+                       inner join (select * from kehujingyingbudb.ml_xy_eg_m where acct_month>=202008 and acct_month<=202010) b on a.user_id = b.user_id
+                       ) t;
+20220620-14:40:07      sql执行完毕
+20220620-14:40:07  统计kehujingyingbudb.mid_eg_recent_train_202010行列数
+20220620-14:40:07      9285行，78列
+
+                   --------------------------------- 核验各账期数据量  ---------------------------------------------- 
+20220620-14:40:07  sql语句：
+                       select user_acct_month, data_use, acct_month, flag_eg, count(1) 
+                       from kehujingyingbudb.mid_eg_recent_train_202010 
+                       group by user_acct_month, data_use, acct_month, flag_eg 
+                       order by user_acct_month, data_use, acct_month, flag_eg
+
+20220620-14:40:08  结果：
+                      user_acct_month     data_use  acct_month  flag_eg  count
+                   0           202010  data_timein      202008      NaN    333
+                   1           202010  data_timein      202009      0.0    426
+                   2           202010  data_timein      202009      1.0     74
+                   3           202010  data_timein      202010      0.0    426
+                   4           202010  data_timein      202010      1.0     74
+                   5           202010   data_train      202008      NaN   1952
+                   6           202010   data_train      202009      0.0   2000
+                   7           202010   data_train      202009      1.0   1000
+                   8           202010   data_train      202010      0.0   2000
+                   9           202010   data_train      202010      1.0   1000
+
+
+D:\工作\模型脚本\ModelProject\selfmodule\tablemodule\tablefun.py:895: UserWarning: 下列账期用户量不同，请检查！
+                             acct_month  flag_eg  count
+user_acct_month data_use                               
+202010          data_timein      202008      0.0    333
+                data_timein      202009      1.0    500
+                data_timein      202010      1.0    500
+                data_train       202008      0.0   1952
+                data_train       202009      1.0   3000
+                data_train       202010      1.0   3000
+  warnings.warn(w); time.sleep(seconds)
+20220620-14:40:11  
+                   ---- 删除中间表
+20220620-14:40:11  drop table if exists kehujingyingbudb.mid_eg_model_train_202010;
+20220620-14:40:11      sql执行完毕
+20220620-14:40:11  drop table if exists kehujingyingbudb.mid_eg_user_train_202010;
+20220620-14:40:11      sql执行完毕
+
+20220620-14:40:11  ---- 返回结果表名：kehujingyingbudb.mid_eg_recent_train_202010
+20220620-14:40:11  ---- 将Info保存至./binaryclassify/eg/traintest~202010~202012/Info~base_train.pkl
+
+20220620-14:40:11  结束时间：2022-06-20 14:40:11
+20220620-14:40:11  耗时：9 s
+
+                   ###################################################################### 探索模型宽表
+                    
+20220620-14:40:11  开始时间：2022-06-20 14:40:11
+20220620-14:40:11  参数设置：
+                       Info.iv_limit: 0.05
+                       step: train
+                       Info.model_name: 模型示例
+                       table_in: kehujingyingbudb.mid_eg_recent_train_202010
+                       stage: explore
+                       Info.auto_pair2: False
+                       Info.r_limit: 0.95
+
+20220620-14:40:11  field_base: 92行
+
+20220620-14:40:11  删除7个available_notzd“不可用”字段：['cred_type', 'called_dura', 'days_roam', 'dayvalue_calling_dura', 'dayvalue_gprs_flow', 'dayvalue_user_status', 'dayvalue_phone_no_null']
+20220620-14:40:11  field_base: 85行
+
+20220620-14:40:11  删除1个基于“不可用”字段加工的手动衍生_py字段：
+                        field_name                 formula
+                   54  days_roam_p  days_roam / days_month
+20220620-14:40:11  field_base: 84行
+20220620-14:40:11  ------------------------- 读取数据: kehujingyingbudb.mid_eg_recent_train_202010 2022-06-20 14:40:11 -------------------------
+20220620-14:40:11      src: gp
+20220620-14:40:11      condition: data_use='data_train'
+20220620-14:40:11      col_need(71): ['user_acct_month', 'data_use', 'acct_month', 'user_id', 'innet_months', 'age', 'age_add', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'arpu', 'pay_cnt', 'pay_fee', 'acct_balance', 'calling_cnt', 'calling_dura', 'called_cnt', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow', 'gprs_flow_4g', 'gprs_flow_5g', 'gprs_flow_busy', 'gprs_flow_idle', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'gprs_flow_gat', 'days_gat', 'days_gprs', 'days_call', 'nos_call', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'call_fee_roam', 'gprs_income', 'gprs_fee', 'call_fee', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'score_flag_eg', 'score_flag_eg2', 'innet_date', 'last_stop_date', 'phone_no_null', 'phone_no_tm', 'dinner_id', 'account_id', 'sex', 'sex_add', 'user_status', 'dinner', 'if_nolimit', 'if_5g_dinner', 'if_5g_term', 'if_jt', 'start_level', 'if_cred_multi', 'term_model', 'term_brand', 'term_type', 'sk_type', 'if_new_term', 'flag_eg']
+20220620-14:40:11      col_del: None
+20220620-14:40:11      col_char(22): ['acct_month', 'phone_no_null', 'phone_no_tm', 'user_id', 'dinner_id', 'account_id', 'sex', 'sex_add', 'user_status', 'dinner', 'if_nolimit', 'if_5g_dinner', 'if_5g_term', 'if_jt', 'start_level', 'if_cred_multi', 'term_model', 'term_brand', 'term_type', 'sk_type', 'if_new_term', 'flag_eg']
+20220620-14:40:11      col_num(45): ['innet_months', 'age', 'age_add', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'arpu', 'pay_cnt', 'pay_fee', 'acct_balance', 'calling_cnt', 'calling_dura', 'called_cnt', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow', 'gprs_flow_4g', 'gprs_flow_5g', 'gprs_flow_busy', 'gprs_flow_idle', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'gprs_flow_gat', 'days_gat', 'days_gprs', 'days_call', 'nos_call', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'call_fee_roam', 'gprs_income', 'gprs_fee', 'call_fee', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'score_flag_eg', 'score_flag_eg2']
+20220620-14:40:11      col_date(2): ['innet_date', 'last_stop_date']
+20220620-14:40:11      nrows: None
+20220620-14:40:11      if_coltolower: True
+20220620-14:40:11      kwargs: {}
+
+20220620-14:40:11      读取
+20220620-14:40:13      shape: (7952, 71)
+
+20220620-14:40:13  将score_flag_eg2字段类型(object): .astype(float)
+20220620-14:40:13  -------------------------读取完毕: (7952, 71) 2022-06-20 14:40:13 -------------------------
+
+20220620-14:40:13  手动衍生_py12个字段: {'monthsaready_last_stop_date': '最后停机时间：已发生时长', 'monthsremain_last_stop_date': '最后停机时间：剩余时长', 'days_gprs_p': '上网天数占比', 'days_call_p': '通话天数占比', 'days_call_p_1': '通话天数占比_1', 'days_call_p_2': '通话天数占比_2', 'days_call_p_3': '通话天数占比_3', 'days_call_p_4': '通话天数占比_4', 'greatest_gprs_app': 'app偏好', 'paste_dinner_innet_months': '主套餐、入网时长：交叉', 'ago_score_flag_eg': '模型示例的分数(历史)', 'ago_score_flag_eg2': '模型示例2的分数(历史)'}
+20220620-14:40:13  monthsaready_last_stop_date: current_date - last_stop_date
+20220620-14:40:13  monthsremain_last_stop_date: last_stop_date - current_date
+20220620-14:40:14  days_gprs_p: days_gprs / days_month
+20220620-14:40:14  days_call_p: days_call / days_month
+20220620-14:40:14  days_call_p_1: days_call_p + days_gprs
+20220620-14:40:14  days_call_p_2: days_call_p_1 + days_gprs
+20220620-14:40:14  days_call_p_3: days_call_p_2 + days_gprs
+20220620-14:40:14  days_call_p_4: days_call_p_3 + days_gprs
+20220620-14:40:14  greatest_gprs_app: {'gprs_flow_video': 'video', 'gprs_flow_short': 'short', 'gprs_flow_music': 'music', 'gprs_flow_commu': 'commu', 'gprs_flow_game': 'game'}
+20220620-14:40:15  paste_dinner_innet_months: (dinner, innet_months)
+20220620-14:40:18  ago_score_flag_eg: {'notago_tovalue': 1}
+20220620-14:40:18  ago_score_flag_eg2: {'notago_tovalue': 1}
+20220620-14:40:18  数据量: (7952, 83)
+
+20220620-14:40:18  检查数据
+20220620-14:40:18  各账期数据量分布：
+                       202008  data_train    1952
+                       202009  data_train    3000
+                       202010  data_train    3000
+                       dtype: int64
+20220620-14:40:18  各账期数据量不一致
+20220620-14:40:18  以nan填充缺少账期的记录
+20220620-14:40:19      修改后：
+                       202008  data_train    3000
+                       202009  data_train    3000
+                       202010  data_train    3000
+                       dtype: int64)
+20220620-14:40:19  
+                   diff_limitweiNone,不考察近n月字段各账期取值分布, dis_exam返回None！
+
+20220620-14:40:19  字段类型分布: 
+                       float64    55
+                       object    26
+                       datetime64[ns]    2
+                       dtype: int64
+
+
+20220620-14:40:25  填充数值型&类别型字段缺失值
+20220620-14:40:25  日期型字段缺失值情况：
+                       innet_date    1048
+                       last_stop_date    1048
+                       dtype: int64
+
+20220620-14:40:25  正负例分布：
+                       data_train  202010  0    2000
+                       data_train  202010  1    1000
+                       dtype: int64
+
+                   ----------------------------------------- 当月 数值型&类别型 原始数据 
+20220620-14:40:25  新数据newdata的shape：(3000, 77)
+20220620-14:40:25  数据转换
+20220620-14:40:33  转换后shape：(3000, 26)
+20220620-14:40:33  从流水线中获取WoeTransformer_DF
+20220620-14:40:33  首个数据集，直接返回woe编码结果
+20220620-14:40:33  筛选衍生字段的 原始/手动衍生_sql 字段
+20220620-14:40:33  数值型字段：有效字段24个，其中当月自动衍生字段23个，近n月自动衍生字段23个
+20220620-14:40:33  类别型字段：有效字段2个（强制加入0个）:
+20220620-14:40:33      当月自动衍生_py字段2个: ['if_nolimit~是', 'if_5g_dinner~是']
+20220620-14:40:33      近n月自动衍生_py字段2个: ['if_nolimit~是', 'if_5g_dinner~是']
+
+                   ----------------------------------------- 近n月 数值型 近3月均值 
+20220620-14:40:33  字段个数：23, 添加字段：['flag_eg']
+20220620-14:40:33  新数据newdata的shape：(3000, 24)
+20220620-14:40:33  数据转换
+20220620-14:40:38  转换后shape：(3000, 22)
+20220620-14:40:38  从流水线中获取WoeTransformer_DF
+20220620-14:40:39  待新增字段与原宽表字段 相关性系数大于Info.r_limit（0.95）的字段对有1对
+20220620-14:40:39      从中二者中剔除字段1个字段:['monthsremain_last_stop_date']
+20220620-14:40:39      其中待新增中剔除0个
+20220620-14:40:39      其中原宽表中剔除1个
+
+20220620-14:40:39  已有宽表shape：(3000, 26)
+20220620-14:40:39  向宽表中加入字段（22个）：['avg__gprs_flow_short', 'avg__gprs_flow_commu', 'avg__call_dura_roam', 'avg__gprs_flow_music', 'avg__nos_calling', 'avg__calling_dura', 'avg__gprs_now_defer', 'avg__calling_diff_dura', 'avg__gprs_last_defer', 'avg__monthsremain_last_stop_date', 'avg__gprs_resource', 'avg__gprs_now_rest', 'avg__gprs_flow_video', 'avg__calling_diff_cnt', 'avg__arpu', 'avg__gprs_flow_game', 'avg__gprs_flow_roam', 'avg__call_use', 'avg__calling_cnt', 'avg__dinner_fee', 'avg__nos_calling_diff', 'avg__gprs_flow_busy']
+20220620-14:40:39  从宽表中删除字段（1个）：['monthsremain_last_stop_date']
+20220620-14:40:39  目前宽表shape：(3000, 47)
+
+                   ----------------------------------------- 近n月 数值型 近3月离散系数 
+20220620-14:40:39  字段个数：23, 添加字段：['flag_eg']
+20220620-14:40:40  新数据newdata的shape：(3000, 24)
+20220620-14:40:40  数据转换
+20220620-14:40:44  转换后shape：(3000, 12)
+20220620-14:40:44  从流水线中获取WoeTransformer_DF
+20220620-14:40:45  待新增字段与原宽表字段 相关性系数大于Info.r_limit（0.95）的字段对有1对
+20220620-14:40:45      从中二者中剔除字段1个字段:['sep__gprs_flow_game']
+20220620-14:40:45      其中待新增中剔除1个
+20220620-14:40:45      其中原宽表中剔除0个
+
+20220620-14:40:45  已有宽表shape：(3000, 47)
+20220620-14:40:45  向宽表中加入字段（11个）：['sep__gprs_now_rest', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__calling_dura', 'sep__gprs_flow_music', 'sep__calling_diff_dura', 'sep__monthsremain_last_stop_date', 'sep__gprs_flow_video', 'sep__gprs_flow_short', 'sep__calling_cnt', 'sep__calling_diff_cnt']
+20220620-14:40:45  从宽表中删除字段（0个）：[]
+20220620-14:40:45  目前宽表shape：(3000, 58)
+
+                   ----------------------------------------- 近n月 数值型 近3月波动性 
+20220620-14:40:45  字段个数：23, 添加字段：['flag_eg']
+20220620-14:40:45  新数据newdata的shape：(3000, 24)
+20220620-14:40:45  数据转换
+20220620-14:40:50  转换后shape：(3000, 10)
+20220620-14:40:50  从流水线中获取WoeTransformer_DF
+20220620-14:40:51  待新增字段与原宽表字段 相关性系数大于Info.r_limit（0.95）的字段对有3对
+20220620-14:40:51      从中二者中剔除字段3个字段:['wave__monthsremain_last_stop_date', 'wave__gprs_flow_game', 'sep__gprs_flow_short']
+20220620-14:40:51      其中待新增中剔除2个
+20220620-14:40:51      其中原宽表中剔除1个
+
+20220620-14:40:51  已有宽表shape：(3000, 58)
+20220620-14:40:51  向宽表中加入字段（8个）：['wave__gprs_now_defer', 'wave__gprs_flow_commu', 'wave__gprs_flow_video', 'wave__gprs_flow_music', 'wave__gprs_flow_short', 'wave__call_use', 'wave__gprs_last_defer', 'wave__gprs_now_rest']
+20220620-14:40:51  从宽表中删除字段（1个）：['sep__gprs_flow_short']
+20220620-14:40:51  目前宽表shape：(3000, 65)
+
+                   ----------------------------------------- 近n月 数值型 近3月成长率 
+20220620-14:40:51  字段个数：23, 添加字段：['flag_eg']
+20220620-14:40:51  新数据newdata的shape：(3000, 24)
+20220620-14:40:51  数据转换
+20220620-14:40:56  转换后shape：(3000, 18)
+20220620-14:40:56  从流水线中获取WoeTransformer_DF
+20220620-14:40:56  待新增字段与原宽表字段 相关性系数大于Info.r_limit（0.95）的字段对有7对
+20220620-14:40:56      从中二者中剔除字段7个字段:['gprs_flow_game', 'grow__calling_diff_dura', 'grow__gprs_flow_video', 'grow__gprs_flow_short', 'grow__nos_calling', 'grow__gprs_flow_commu', 'grow__monthsremain_last_stop_date']
+20220620-14:40:56      其中待新增中剔除6个
+20220620-14:40:56      其中原宽表中剔除1个
+
+20220620-14:40:56  已有宽表shape：(3000, 65)
+20220620-14:40:56  向宽表中加入字段（12个）：['grow__dinner_fee', 'grow__gprs_last_defer', 'grow__call_use', 'grow__gprs_flow_music', 'grow__calling_diff_cnt', 'grow__arpu', 'grow__gprs_now_rest', 'grow__gprs_flow_game', 'grow__calling_cnt', 'grow__gprs_flow_busy', 'grow__gprs_now_defer', 'grow__gprs_flow_roam']
+20220620-14:40:56  从宽表中删除字段（1个）：['gprs_flow_game']
+20220620-14:40:56  目前宽表shape：(3000, 76)
+
+                   ----------------------------------------- 近n月 数值型 近3月最大值 
+20220620-14:40:56  字段个数：23, 添加字段：['flag_eg']
+20220620-14:40:56  新数据newdata的shape：(3000, 24)
+20220620-14:40:56  数据转换
+20220620-14:41:02  转换后shape：(3000, 22)
+20220620-14:41:02  从流水线中获取WoeTransformer_DF
+20220620-14:41:04  待新增字段与原宽表字段 相关性系数大于Info.r_limit（0.95）的字段对有8对
+20220620-14:41:05      从中二者中剔除字段8个字段:['max__gprs_flow_game', 'max__age_add', 'avg__gprs_flow_music', 'gprs_now_defer', 'dinner_fee', 'arpu', 'avg__gprs_flow_short', 'avg__gprs_flow_commu']
+20220620-14:41:05      其中待新增中剔除2个
+20220620-14:41:05      其中原宽表中剔除6个
+
+20220620-14:41:05  已有宽表shape：(3000, 76)
+20220620-14:41:05  向宽表中加入字段（20个）：['max__gprs_now_rest', 'max__calling_diff_cnt', 'max__gprs_resource', 'max__nos_calling_diff', 'max__gprs_last_defer', 'max__gprs_now_defer', 'max__calling_cnt', 'max__arpu', 'max__calling_dura', 'max__gprs_flow_music', 'max__call_use', 'max__nos_calling', 'max__gprs_flow_short', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__gprs_flow_busy', 'max__gprs_flow_roam']
+20220620-14:41:05  从宽表中删除字段（6个）：['avg__gprs_flow_short', 'avg__gprs_flow_commu', 'dinner_fee', 'gprs_now_defer', 'avg__gprs_flow_music', 'arpu']
+20220620-14:41:05  目前宽表shape：(3000, 90)
+
+                   ----------------------------------------- 近n月 数值型 近3月最小值 
+20220620-14:41:05  字段个数：23, 添加字段：['flag_eg']
+20220620-14:41:05  新数据newdata的shape：(3000, 24)
+20220620-14:41:05  数据转换
+20220620-14:41:09  转换后shape：(3000, 14)
+20220620-14:41:09  从流水线中获取WoeTransformer_DF
+20220620-14:41:12  待新增字段与原宽表字段 相关性系数大于Info.r_limit（0.95）的字段对有1对
+20220620-14:41:12      从中二者中剔除字段1个字段:['min__monthsremain_last_stop_date']
+20220620-14:41:12      其中待新增中剔除1个
+20220620-14:41:12      其中原宽表中剔除0个
+
+20220620-14:41:12  已有宽表shape：(3000, 90)
+20220620-14:41:12  向宽表中加入字段（13个）：['min__gprs_last_defer', 'min__gprs_flow_roam', 'min__gprs_flow_video', 'min__gprs_flow_busy', 'min__gprs_flow_commu', 'min__gprs_flow_music', 'min__gprs_flow_short', 'min__gprs_now_rest', 'min__dinner_fee', 'min__call_use', 'min__gprs_now_defer', 'min__gprs_resource', 'min__arpu']
+20220620-14:41:12  从宽表中删除字段（0个）：[]
+20220620-14:41:12  目前宽表shape：(3000, 103)
+
+                   ----------------------------------------- 近n月 数值型 近3月标准差 
+20220620-14:41:12  字段个数：23, 添加字段：['flag_eg']
+20220620-14:41:12  新数据newdata的shape：(3000, 24)
+20220620-14:41:12  数据转换
+20220620-14:41:17  转换后shape：(3000, 20)
+20220620-14:41:17  从流水线中获取WoeTransformer_DF
+20220620-14:41:20  待新增字段与原宽表字段 相关性系数大于Info.r_limit（0.95）的字段对有4对
+20220620-14:41:20      从中二者中剔除字段4个字段:['std__gprs_flow_game', 'std__gprs_flow_music', 'std__gprs_flow_video', 'std__gprs_flow_short']
+20220620-14:41:20      其中待新增中剔除4个
+20220620-14:41:20      其中原宽表中剔除0个
+
+20220620-14:41:20  已有宽表shape：(3000, 103)
+20220620-14:41:20  向宽表中加入字段（16个）：['std__calling_diff_cnt', 'std__gprs_flow_commu', 'std__gprs_flow_roam', 'std__call_dura_roam', 'std__call_use', 'std__gprs_now_rest', 'std__calling_diff_dura', 'std__arpu', 'std__nos_calling_diff', 'std__nos_calling', 'std__dinner_fee', 'std__gprs_last_defer', 'std__calling_dura', 'std__gprs_resource', 'std__calling_cnt', 'std__gprs_flow_busy']
+20220620-14:41:20  从宽表中删除字段（0个）：[]
+20220620-14:41:20  目前宽表shape：(3000, 119)
+
+                   ----------------------------------------- 近n月 数值型 大于x的月份数 
+20220620-14:41:20  ('more0cnt', '近3月大于0的月份数')
+20220620-14:41:20  ('moreq25cnt', '近3月大于第一四分位数的月份数')
+20220620-14:41:20  新数据newdata的shape：(3000, 47)
+20220620-14:41:20  数据转换
+20220620-14:41:26  转换后shape：(3000, 16)
+20220620-14:41:27  从流水线中获取WoeTransformer_DF
+20220620-14:41:27  待新增字段与原宽表字段 相关性系数大于Info.r_limit（0.95）的字段对有3对
+20220620-14:41:27      从中二者中剔除字段3个字段:['moreq25cnt__gprs_flow_game', 'moreq25cnt__gprs_now_defer', 'moreq25cnt__calling_diff_cnt']
+20220620-14:41:27      其中待新增中剔除3个
+20220620-14:41:27      其中原宽表中剔除0个
+
+20220620-14:41:27  已有宽表shape：(3000, 119)
+20220620-14:41:27  向宽表中加入字段（13个）：['moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'moreq25cnt__gprs_flow_video', 'more0cnt__calling_cnt', 'moreq25cnt__calling_dura', 'moreq25cnt__call_use', 'more0cnt__nos_calling', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__gprs_resource']
+20220620-14:41:27  从宽表中删除字段（0个）：[]
+20220620-14:41:27  目前宽表shape：(3000, 132)
+
+                   ----------------------------------------- 近n月 类别型 取某值的月份数 
+20220620-14:41:27  字段个数：2, 添加字段：['flag_eg']
+20220620-14:41:27  新数据newdata的shape：(3000, 3)
+20220620-14:41:27  数据转换
+20220620-14:41:31  转换后shape：(3000, 2)
+20220620-14:41:31  从流水线中获取WoeTransformer_DF
+20220620-14:41:31  待新增字段与原宽表字段 相关性系数大于Info.r_limit（0.95）的字段对有2对
+20220620-14:41:31      从中二者中剔除字段2个字段:['if_nolimit~是', 'if_5g_dinner~是']
+20220620-14:41:31      其中待新增中剔除0个
+20220620-14:41:31      其中原宽表中剔除2个
+
+20220620-14:41:31  已有宽表shape：(3000, 132)
+20220620-14:41:31  向宽表中加入字段（2个）：['valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是']
+20220620-14:41:31  从宽表中删除字段（2个）：['if_5g_dinner~是', 'if_nolimit~是']
+20220620-14:41:31  目前宽表shape：(3000, 132)
+
+                   ----------------------------------------- 汇总最终宽表 
+20220620-14:41:31  计算字段之间的相关性系数
+20220620-14:41:31  
+                       count    8646.0
+                       mean    0.272
+                       std    0.182
+                       min    0.0
+                       25%    0.147
+                       50%    0.226
+                       75%    0.343
+                       max    0.949
+                       dtype: float64
+
+20220620-14:41:31  iv分布：
+                       count    132.0
+                       mean    0.159
+                       std    0.118
+                       min    0.05
+                       25%    0.072
+                       50%    0.099
+                       75%    0.235
+                       max    0.611
+                       dtype: float64
+
+20220620-14:41:31  woe_accum(累计)概览：                                             value    0    1       woe  weight  woe_weight  ALL
+                       std__gprs_flow_video         (114.143196, inf]  199  308  1.129942  0.2085    0.235593  507
+                       max__gprs_flow_video              (199.0, inf]  207  318  1.122480  0.2145    0.240772  525
+                       gprs_flow_commu                     (9.5, inf]  220  335  1.113650  0.2250    0.250571  555
+                       more0cnt__gprs_flow_video           (1.5, inf]  228  334  1.074943  0.2200    0.236487  562
+                       moreq25cnt__gprs_flow_video         (1.5, inf]  228  334  1.074943  0.2200    0.236487  562
+
+20220620-14:41:31  最终宽表字段列表col_all:
+20220620-14:41:31      len(col_all): 132
+20220620-14:41:31      补充5个的字段（must_remain=是）：{'account_id', 'days_call_p_4', 'user_status', 'greatest_gprs_app', 'gprs_flow_game'}
+20220620-14:41:31      len(col_all): 137
+20220620-14:41:31      补充账期、数据集名称、用户标识等，目标字段(Info.col_mark、Info.col_target)
+20220620-14:41:31      len(col_all): 142
+
+20220620-14:41:31      补充4个的字段（col_mark、col_target、condition、dict_sortscore、col_out）：{'call_fee_local', 'last_stop_date', 'sms_cnt', 'phone_no_null'}
+20220620-14:41:31      len(col_all): 146
+20220620-14:41:31  整理宽表数据字典
+                   宽表数据字典概览 (146, 16):
+                        是否宽表字段       field_name         comment dtype_db dtype_classify     field_src                                       table available available_notzd available_zd  \
+                                  是  user_acct_month  观察期最后账期      NaN         类别型  手动衍生_sql                                         NaN       NaN             NaN          NaN   
+                                  是         data_use      数据集名称      NaN         类别型  手动衍生_sql                                         NaN       NaN             NaN          NaN   
+                                  是       acct_month            账期   bigint         类别型  手动衍生_sql  kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN   
+                                  是    phone_no_null        手机号码  numeric         类别型          原始  kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN   
+                                  是          user_id        手机号id     text         类别型          原始  kehujingyingbudb.ml_feature_info_yw_user_m       NaN             NaN          NaN   
+                   
+                        formula          remark must_remain into_model is_cause        base_init  
+                            NaN             NaN         NaN        NaN      NaN  user_acct_month  
+                            NaN             NaN         NaN        NaN      NaN         data_use  
+                            NaN             NaN         NaN        NaN       否       acct_month  
+                            NaN  不参与自动衍生         NaN       删除       否    phone_no_null  
+                            NaN             NaN         NaN        NaN       否          user_id  
+
+20220620-14:41:31  保存Info至：./binaryclassify/eg/traintest~202010~202012/Info~tabexp.pkl
+20220620-14:41:31  结束时间：2022-06-20 14:41:31
+20220620-14:41:31  耗时：80 s
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: Pipeline_DF：verbose参数值被赋予print_indent后默认参数设置为None
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: FeatureUnion_DF：verbose参数值被赋予print_indent后默认参数设置为None
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: opera_pair_fun paste时存在非类别型字段，请确认: ['innet_months']
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: field_base中未包括下列字段，但实际数据 多出：{'user_acct_month', 'data_use'}
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: field_base中未规定下列字段数据类型，请确认默认类型是否正确：{'user_acct_month': 'object', 'data_use': 'object'}
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     FeaturePrefilter_DF unique_limit(5000)小于X行数(3000), 添加unique_limit_actual：len(X)*0.99=2970
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     NumStrSpliter 数据中未出现非数值型字段！
+  convert=self.convert_dtype,
+
+                   ###################################################################### 训练集加工
+                    
+20220620-14:41:31  开始时间：2022-06-20 14:41:31
+20220620-14:41:31  参数设置：
+                       Info.iv_limit: 0.05
+                       step: train
+                       stage: create
+                       Info.model_name: 模型示例
+                       table_in: kehujingyingbudb.mid_eg_recent_train_202010
+                       Info.auto_pair2: False
+                       Info.r_limit: 0.95
+
+20220620-14:41:34  ------------------------- 读取数据: kehujingyingbudb.mid_eg_recent_train_202010 2022-06-20 14:41:34 -------------------------
+20220620-14:41:34      src: gp
+20220620-14:41:34      condition: None
+20220620-14:41:34      col_need(38): ['user_acct_month', 'data_use', 'acct_month', 'phone_no_null', 'user_id', 'account_id', 'innet_months', 'age_add', 'user_status', 'last_stop_date', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'if_nolimit', 'if_5g_dinner', 'arpu', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'days_gprs', 'days_call', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'flag_eg']
+20220620-14:41:34      col_del: None
+20220620-14:41:34      col_char(10): ['user_acct_month', 'data_use', 'acct_month', 'phone_no_null', 'user_id', 'account_id', 'user_status', 'if_nolimit', 'if_5g_dinner', 'flag_eg']
+20220620-14:41:34      col_num(27): ['innet_months', 'age_add', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'arpu', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'days_gprs', 'days_call', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game']
+20220620-14:41:34      col_date(1): ['last_stop_date']
+20220620-14:41:34      nrows: None
+20220620-14:41:34      if_coltolower: True
+20220620-14:41:34      kwargs: {}
+
+20220620-14:41:34      读取
+20220620-14:41:36      shape: (9285, 38)
+
+20220620-14:41:36  -------------------------读取完毕: (9285, 38) 2022-06-20 14:41:36 -------------------------
+
+20220620-14:41:36  手动衍生_py7个字段: {'monthsremain_last_stop_date': '最后停机时间：剩余时长', 'days_call_p': '通话天数占比', 'days_call_p_1': '通话天数占比_1', 'days_call_p_2': '通话天数占比_2', 'days_call_p_3': '通话天数占比_3', 'days_call_p_4': '通话天数占比_4', 'greatest_gprs_app': 'app偏好'}
+20220620-14:41:36  monthsremain_last_stop_date: last_stop_date - current_date
+20220620-14:41:36  days_call_p: days_call / days_month
+20220620-14:41:36  days_call_p_1: days_call_p + days_gprs
+20220620-14:41:36  days_call_p_2: days_call_p_1 + days_gprs
+20220620-14:41:36  days_call_p_3: days_call_p_2 + days_gprs
+20220620-14:41:36  days_call_p_4: days_call_p_3 + days_gprs
+20220620-14:41:36  greatest_gprs_app: {'gprs_flow_video': 'video', 'gprs_flow_short': 'short', 'gprs_flow_music': 'music', 'gprs_flow_commu': 'commu', 'gprs_flow_game': 'game'}
+20220620-14:41:38  数据量: (9285, 45)
+
+20220620-14:41:38  检查数据
+20220620-14:41:38  各账期数据量分布：
+                       202008  data_timein    333
+                       202008  data_train    1952
+                       202009  data_timein    500
+                       202009  data_train    3000
+                       202010  data_timein    500
+                       202010  data_train    3000
+                       dtype: int64
+20220620-14:41:38  各账期数据量不一致
+20220620-14:41:38  以nan填充缺少账期的记录
+20220620-14:41:38      修改后：
+                       202008  data_timein    500
+                       202008  data_train    3000
+                       202009  data_timein    500
+                       202009  data_train    3000
+                       202010  data_timein    500
+                       202010  data_train    3000
+                       dtype: int64)
+20220620-14:41:38  
+                   diff_limitweiNone,不考察近n月字段各账期取值分布, dis_exam返回None！
+
+
+20220620-14:41:38  填充数值型&类别型字段缺失值
+20220620-14:41:38  日期型字段缺失值情况：
+                       last_stop_date    1215
+                       dtype: int64
+
+20220620-14:41:38  正负例分布：
+                       data_timein  202010  0    426
+                       data_timein  202010  1    74
+                       data_train  202010  0    2000
+                       data_train  202010  1    1000
+                       dtype: int64
+
+                   ----------------------------------------- 当月 类别型 onthot 
+
+                   ----------------------------------------- 当月 数值型&类别型 原始数据 
+20220620-14:41:38  (3500, 33)
+20220620-14:41:38  筛选衍生字段的 原始/手动衍生_sql 字段
+
+                   ----------------------------------------- 近n月 数值型 近3月均值 
+20220620-14:41:38  字段个数：19, 添加字段：None
+20220620-14:41:38  (3500, 52)
+
+                   ----------------------------------------- 近n月 数值型 近3月离散系数 
+20220620-14:41:38  字段个数：10, 添加字段：None
+20220620-14:41:38  (3500, 62)
+
+                   ----------------------------------------- 近n月 数值型 近3月波动性 
+20220620-14:41:38  字段个数：8, 添加字段：None
+20220620-14:41:39  (3500, 70)
+
+                   ----------------------------------------- 近n月 数值型 近3月成长率 
+20220620-14:41:39  字段个数：12, 添加字段：None
+20220620-14:41:39  (3500, 82)
+
+                   ----------------------------------------- 近n月 数值型 近3月最大值 
+20220620-14:41:39  字段个数：20, 添加字段：None
+20220620-14:41:39  (3500, 102)
+
+                   ----------------------------------------- 近n月 数值型 近3月最小值 
+20220620-14:41:39  字段个数：13, 添加字段：None
+20220620-14:41:39  (3500, 115)
+
+                   ----------------------------------------- 近n月 数值型 近3月标准差 
+20220620-14:41:39  字段个数：16, 添加字段：None
+20220620-14:41:39  (3500, 131)
+
+                   ----------------------------------------- 近n月 数值型 大于x的月份数 
+20220620-14:41:39  ('more0cnt', '近3月大于0的月份数')
+20220620-14:41:39  ('moreq25cnt', '近3月大于第一四分位数的月份数')
+20220620-14:41:39  (3500, 144)
+
+                   ----------------------------------------- 近n月 类别型 取某值的月份数 
+20220620-14:41:39  字段个数：2, 添加字段：None
+20220620-14:41:39  (3500, 146)
+
+                   ----------------------------------------- 汇总最终宽表 
+20220620-14:41:39  table.shape:(3500, 146)
+
+20220620-14:41:39  保存宽表结果至：./binaryclassify/eg/traintest~202010~202012/train_data~202010.csv
+
+20220620-14:41:39  计算字段之间的相关性系数
+20220620-14:41:39  
+                       count    8646.0
+                       mean    0.168
+                       std    0.19
+                       min    0.0
+                       25%    0.043
+                       50%    0.104
+                       75%    0.208
+                       max    1.0
+                       dtype: float64
+
+
+                   ------------------------------- 计算宽表字段psi ------------------------------------ 
+20220620-14:41:39  训练集 data_train
+                    
+                    20220620-14:41:39  my toolmodule.dataprep.PsiTransformer_DF fit
+                    20220620-14:41:39      开始时间：2022-06-20 14:41:39
+                    20220620-14:41:39      data in : (3000, 137)
+                    20220620-14:41:39      首次从X获取id_X属性 2267646353928
+                    20220620-14:41:39      fit轨迹：PsiTransformer_DF(Ncase='0', Pcase='1', bins=None, col_ignore=None, fit_pop_all=False, precision=6, , psi_limit=0.1, trans_na_error=True, warn_mark=' PsiTransformer')
+                    20220620-14:41:39      输入数据中包括134个数值型字段，先对其进行mdlp分箱：['innet_months', 'age_add', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_flow_roam', 'call_dura_roam', 'days_call_p_4', 'nos_calling', 'nos_calling_diff', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'avg__calling_diff_dura', 'avg__dinner_fee', 'avg__nos_calling', 'avg__call_use', 'avg__call_dura_roam', 'avg__gprs_flow_video', 'avg__calling_dura', 'avg__gprs_last_defer', 'avg__calling_diff_cnt', 'avg__gprs_resource', 'avg__calling_cnt', 'avg__nos_calling_diff', 'avg__gprs_now_defer', 'avg__gprs_flow_busy', 'avg__arpu', 'avg__monthsremain_last_stop_date', 'avg__gprs_flow_game', 'avg__gprs_now_rest', 'avg__gprs_flow_roam', 'sep__calling_diff_dura', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__gprs_flow_video', 'sep__calling_dura', 'sep__calling_diff_cnt', 'sep__calling_cnt', 'sep__gprs_flow_music', 'sep__monthsremain_last_stop_date', 'sep__gprs_now_rest', 'wave__gprs_flow_commu', 'wave__call_use', 'wave__gprs_flow_video', 'wave__gprs_last_defer', 'wave__gprs_flow_short', 'wave__gprs_flow_music', 'wave__gprs_now_defer', 'wave__gprs_now_rest', 'grow__dinner_fee', 'grow__call_use', 'grow__gprs_last_defer', 'grow__calling_diff_cnt', 'grow__calling_cnt', 'grow__gprs_flow_music', 'grow__gprs_now_defer', 'grow__gprs_flow_busy', 'grow__arpu', 'grow__gprs_flow_game', 'grow__gprs_now_rest', 'grow__gprs_flow_roam', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__nos_calling', 'max__call_use', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_dura', 'max__gprs_last_defer', 'max__calling_diff_cnt', 'max__gprs_flow_short', 'max__gprs_resource', 'max__calling_cnt', 'max__nos_calling_diff', 'max__gprs_flow_music', 'max__gprs_now_defer', 'max__gprs_flow_busy', 'max__arpu', 'max__gprs_now_rest', 'max__gprs_flow_roam', 'min__gprs_flow_commu', 'min__dinner_fee', 'min__call_use', 'min__gprs_flow_video', 'min__gprs_last_defer', 'min__gprs_flow_short', 'min__gprs_resource', 'min__gprs_flow_music', 'min__gprs_now_defer', 'min__gprs_flow_busy', 'min__arpu', 'min__gprs_now_rest', 'min__gprs_flow_roam', 'std__calling_diff_dura', 'std__gprs_flow_commu', 'std__dinner_fee', 'std__nos_calling', 'std__call_use', 'std__call_dura_roam', 'std__calling_dura', 'std__gprs_last_defer', 'std__calling_diff_cnt', 'std__gprs_resource', 'std__calling_cnt', 'std__nos_calling_diff', 'std__gprs_flow_busy', 'std__arpu', 'std__gprs_now_rest', 'std__gprs_flow_roam', 'more0cnt__nos_calling', 'more0cnt__calling_cnt', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__call_use', 'moreq25cnt__gprs_flow_video', 'moreq25cnt__calling_dura', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_resource', 'moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是']
+                    20220620-14:41:39      ---------------------------Psi: Mdlp_dt_DF start -------------------------------
+                                           
+                                           20220620-14:41:39  my toolmodule.dataprep.Mdlp_dt_DF fit_transform
+                                           20220620-14:41:39      开始时间：2022-06-20 14:41:39
+                                           20220620-14:41:39      data in : (3000, 134)
+                                               
+                                               20220620-14:41:39  my toolmodule.dataprep.Mdlp_dt_DF fit
+                                               20220620-14:41:39      开始时间：2022-06-20 14:41:39
+                                               20220620-14:41:39      data in : (3000, 134)
+                                               20220620-14:41:39      首次从X获取id_X属性 2267655715080
+                                               20220620-14:41:39      fit轨迹：Mdlp_dt_DF(bin_uplimit=None, if_del=False, min_binsize=30, precision=6, , trans_na_error=True)
+                                               20220620-14:41:45      提取未离散的1字段名（无有效切点）：['grow__dinner_fee']
+                                               20220620-14:41:45      结束时间：2022-06-20 14:41:45 耗时(5s)
+                                               
+                                               20220620-14:41:45  my toolmodule.dataprep.Mdlp_dt_DF transform
+                                               20220620-14:41:45      开始时间：2022-06-20 14:41:45
+                                               20220620-14:41:45      data in : (3000, 134)
+                                               20220620-14:41:45      self已带有id_X属性 2267655715080
+                                               20220620-14:41:45      首次从X获取id_X_new属性 2267655715080
+                                               20220620-14:41:45      未剔除1个字段：['grow__dinner_fee']
+                                               20220620-14:41:47      data out: (3000, 134)
+                                               20220620-14:41:47      transform轨迹：Mdlp_dt_DF(bin_uplimit=None, if_del=False, min_binsize=30, precision=6, , trans_na_error=True)
+                                               20220620-14:41:47      结束时间：2022-06-20 14:41:47 耗时(1s)
+                                           
+                                           20220620-14:41:47      my toolmodule.dataprep.Mdlp_dt_DF fit_transform 结束时间：2022-06-20 14:41:47 耗时(7s)
+                    20220620-14:41:47      ---------------------------Psi: Mdlp_dt_DF end -------------------------------
+                    20220620-14:41:47      合并离散后的数值字段 与 类别字段：(3000, 137)
+                    20220620-14:41:47      data_train（初次） 统计频数（区分正负例）：self.col_pop_PN_old_
+                    20220620-14:41:48      不统计频数（不区分正负例）：训练数据经过抽样，非原始比例，如有需要可自行修改
+                    20220620-14:41:48      结束时间：2022-06-20 14:41:48 耗时(8s)
+
+
+20220620-14:41:48  时间内验证集 data_timein
+                    
+                    20220620-14:41:48  my toolmodule.dataprep.PsiTransformer_DF transform
+                    20220620-14:41:48      开始时间：2022-06-20 14:41:48
+                    20220620-14:41:48      data in : (500, 145)
+                    20220620-14:41:48      self已带有id_X属性 2267646353928
+                    20220620-14:41:48      首次从X获取id_X_new属性 2267652252392
+                    20220620-14:41:48      data in2: (500, 137)
+                    20220620-14:41:48      对134个数值字段进行分箱：['innet_months', 'age_add', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_flow_roam', 'call_dura_roam', 'days_call_p_4', 'nos_calling', 'nos_calling_diff', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'avg__calling_diff_dura', 'avg__dinner_fee', 'avg__nos_calling', 'avg__call_use', 'avg__call_dura_roam', 'avg__gprs_flow_video', 'avg__calling_dura', 'avg__gprs_last_defer', 'avg__calling_diff_cnt', 'avg__gprs_resource', 'avg__calling_cnt', 'avg__nos_calling_diff', 'avg__gprs_now_defer', 'avg__gprs_flow_busy', 'avg__arpu', 'avg__monthsremain_last_stop_date', 'avg__gprs_flow_game', 'avg__gprs_now_rest', 'avg__gprs_flow_roam', 'sep__calling_diff_dura', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__gprs_flow_video', 'sep__calling_dura', 'sep__calling_diff_cnt', 'sep__calling_cnt', 'sep__gprs_flow_music', 'sep__monthsremain_last_stop_date', 'sep__gprs_now_rest', 'wave__gprs_flow_commu', 'wave__call_use', 'wave__gprs_flow_video', 'wave__gprs_last_defer', 'wave__gprs_flow_short', 'wave__gprs_flow_music', 'wave__gprs_now_defer', 'wave__gprs_now_rest', 'grow__dinner_fee', 'grow__call_use', 'grow__gprs_last_defer', 'grow__calling_diff_cnt', 'grow__calling_cnt', 'grow__gprs_flow_music', 'grow__gprs_now_defer', 'grow__gprs_flow_busy', 'grow__arpu', 'grow__gprs_flow_game', 'grow__gprs_now_rest', 'grow__gprs_flow_roam', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__nos_calling', 'max__call_use', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_dura', 'max__gprs_last_defer', 'max__calling_diff_cnt', 'max__gprs_flow_short', 'max__gprs_resource', 'max__calling_cnt', 'max__nos_calling_diff', 'max__gprs_flow_music', 'max__gprs_now_defer', 'max__gprs_flow_busy', 'max__arpu', 'max__gprs_now_rest', 'max__gprs_flow_roam', 'min__gprs_flow_commu', 'min__dinner_fee', 'min__call_use', 'min__gprs_flow_video', 'min__gprs_last_defer', 'min__gprs_flow_short', 'min__gprs_resource', 'min__gprs_flow_music', 'min__gprs_now_defer', 'min__gprs_flow_busy', 'min__arpu', 'min__gprs_now_rest', 'min__gprs_flow_roam', 'std__calling_diff_dura', 'std__gprs_flow_commu', 'std__dinner_fee', 'std__nos_calling', 'std__call_use', 'std__call_dura_roam', 'std__calling_dura', 'std__gprs_last_defer', 'std__calling_diff_cnt', 'std__gprs_resource', 'std__calling_cnt', 'std__nos_calling_diff', 'std__gprs_flow_busy', 'std__arpu', 'std__gprs_now_rest', 'std__gprs_flow_roam', 'more0cnt__nos_calling', 'more0cnt__calling_cnt', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__call_use', 'moreq25cnt__gprs_flow_video', 'moreq25cnt__calling_dura', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_resource', 'moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是']
+                    20220620-14:41:49      data_timein（初次） 统计频数（不区分正负例）：self.col_pop_all_old_
+                    20220620-14:41:49      data_timein 计算稳定度（区分正负例）：self.col_psi_PN_
+                    20220620-14:42:02      data out: (500, 137)
+                    20220620-14:42:02      transform轨迹：PsiTransformer_DF(Ncase='0', Pcase='1', bins=None, col_ignore=None, fit_pop_all=False, precision=6, , psi_limit=0.1, trans_na_error=True, warn_mark=' PsiTransformer')
+                    20220620-14:42:02      结束时间：2022-06-20 14:42:02 耗时(13s)
+
+
+20220620-14:42:02  保存Info至：./binaryclassify/eg/traintest~202010~202012/Info~tabcre_train.pkl
+20220620-14:42:02  结束时间：2022-06-20 14:42:02
+20220620-14:42:02  耗时：30 s
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: stage取值为create时,r_limit, iv_limit参数无效，将被忽略
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer data_timein 计算稳定性(区分正负例)-正例（1） ['account_id']字段多出375个取值, .head(5):
+                      old  new
+field      value              
+account_id 102192771  NaN  1.0
+           102221392  NaN  1.0
+           103725068  NaN  1.0
+           103734255  NaN  1.0
+           103734456  NaN  1.0
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer data_timein 计算稳定性(区分正负例)-负例（0） ['account_id']字段多出375个取值, .head(5):
+                      old  new
+field      value              
+account_id 102192771  NaN  1.0
+           102221392  NaN  1.0
+           103725068  NaN  1.0
+           103734255  NaN  1.0
+           103734456  NaN  1.0
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer data_timein 计算稳定性(区分正负例) ，1个字段稳定性>=psi_limit（0.1）：
+account_id    0.270139
+dtype: float64
+  convert=self.convert_dtype,
+
+                   ###################################################################### 加工测试账期近n月基础数据
+                    
+20220620-14:42:02  开始时间：2022-06-20 14:42:02
+20220620-14:42:02  ---- month: 202012
+20220620-14:42:02  ---- 参数设置：
+                       ---- step: test
+                       ---- Info.model_name: 模型示例
+                       ---- Info.n_recent: 3
+                       ---- Info.timeout_limit: 1000
+20220620-14:42:02  ---- field_base中acct_month字段为数值型，Info.Pcase参数取值为<class 'int'>，将Info.Pcase纠正为数值型
+
+                   ------------------------------------- 检查各前置表 --------------------------------------------------- 
+20220620-14:42:02  检查 kehujingyingbudb.ml_xy_eg_m
+20220620-14:42:02      78 列
+20220620-14:42:02      202012账期： 15000行
+20220620-14:42:02      202011账期： 10000行
+20220620-14:42:02      202010账期： 15000行
+
+
+20220620-14:42:02  正负例分布：select cast(flag_eg as text) flag_eg, count(1) from kehujingyingbudb.ml_xy_eg_m  group by flag_eg
+20220620-14:42:02      dis_test_total: {'count': 68000, 'Pcount': 8036, 'prop': 0.118}
+
+20220620-14:42:02  正负例分布：select cast(flag_eg as text) flag_eg, count(1) from kehujingyingbudb.ml_xy_eg_m where acct_month=202012 and user_status='在网-正常' and 
+                       phone_no_null is null and
+                       last_stop_date is not null and
+                       innet_months >= 3 and flag_eg is not null group by flag_eg
+20220620-14:42:02      dis_test_model {'count': 12449, 'Pcount': 1832, 'prop': 0.147}
+
+20220620-14:42:02      Info无dis_train_model，无法对比dis_train_model与dis_test_model的正例占比变动幅度
+
+
+
+20220620-14:42:02  ---- 建表语句：
+                       drop table if exists kehujingyingbudb.mid_eg_user_test_202012;
+                       create  table kehujingyingbudb.mid_eg_user_test_202012 as 
+                       select acct_month user_acct_month, 'data_timeout' data_use, * from kehujingyingbudb.ml_xy_eg_m 
+                       where acct_month=202012 and user_status='在网-正常' and 
+                           phone_no_null is null and
+                           last_stop_date is not null and
+                           innet_months >= 3 and flag_eg is not null
+                       order by rn limit 1000;
+20220620-14:42:03      sql执行完毕
+20220620-14:42:03  正负例分布：select cast(flag_eg as text) flag_eg, count(1) from kehujingyingbudb.mid_eg_user_test_202012  group by flag_eg
+20220620-14:42:03      dis_test_sample {'count': 1000, 'Pcount': 149, 'prop': 0.149}
+
+20220620-14:42:03      dis_test_sample 较 dis_test_model 正例占比 变动幅度1.36054% (0.149 较 0.147)
+
+
+
+20220620-14:42:03  ---- 关联近n月数据：
+                       drop table if exists kehujingyingbudb.mid_eg_recent_test_202012;
+                       create  table kehujingyingbudb.mid_eg_recent_test_202012 as
+                       select user_acct_month, data_use, acct_month, phone_no_null, phone_no_tm, user_id, dinner_id, account_id, innet_date, innet_months, age, sex, age_add, sex_add, user_status, last_stop_date, dinner, dinner_fee, gprs_last_defer, gprs_resource, gprs_now_rest, call_use, if_nolimit, if_5g_dinner, if_5g_term, if_jt, start_level, cred_type, if_cred_multi, arpu, pay_cnt, pay_fee, acct_balance, term_model, term_brand, term_type, sk_type, if_new_term, calling_cnt, calling_dura, called_cnt, called_dura, calling_diff_cnt, calling_diff_dura, gprs_flow, gprs_flow_4g, gprs_flow_5g, gprs_flow_busy, gprs_flow_idle, gprs_now_defer, gprs_flow_roam, call_dura_roam, days_roam, gprs_flow_gat, days_gat, days_gprs, days_call, nos_call, nos_calling, nos_calling_diff, sms_cnt, call_fee_local, call_fee_roam, gprs_income, gprs_fee, call_fee, gprs_flow_video, gprs_flow_short, gprs_flow_music, gprs_flow_commu, gprs_flow_game, dayvalue_calling_dura, dayvalue_gprs_flow, dayvalue_user_status, dayvalue_phone_no_null, flag_eg, score_flag_eg, score_flag_eg2 
+                       from (
+                       select a.user_acct_month, a.data_use, b.*
+                       from (select * from kehujingyingbudb.mid_eg_user_test_202012 where data_use='data_timeout') a
+                       inner join (select * from kehujingyingbudb.ml_xy_eg_m where acct_month>=202010 and acct_month<=202012) b on a.user_id = b.user_id
+                       ) t;
+20220620-14:42:03      sql执行完毕
+20220620-14:42:03  统计kehujingyingbudb.mid_eg_recent_test_202012行列数
+20220620-14:42:03      2636行，78列
+
+                   --------------------------------- 核验各账期数据量  ---------------------------------------------- 
+20220620-14:42:03  sql语句：
+                       select user_acct_month, data_use, acct_month, flag_eg, count(1) 
+                       from kehujingyingbudb.mid_eg_recent_test_202012 
+                       group by user_acct_month, data_use, acct_month, flag_eg 
+                       order by user_acct_month, data_use, acct_month, flag_eg
+
+20220620-14:42:03  结果：
+                      user_acct_month      data_use  acct_month  flag_eg  count
+                   0           202012  data_timeout      202010        0    851
+                   1           202012  data_timeout      202010        1    149
+                   2           202012  data_timeout      202011        0    547
+                   3           202012  data_timeout      202011        1     89
+                   4           202012  data_timeout      202012        0    851
+                   5           202012  data_timeout      202012        1    149
+
+
+D:\工作\模型脚本\ModelProject\selfmodule\tablemodule\tablefun.py:895: UserWarning: 下列账期用户量不同，请检查！
+                              acct_month  flag_eg  count
+user_acct_month data_use                                
+202012          data_timeout      202010        1   1000
+                data_timeout      202011        1    636
+                data_timeout      202012        1   1000
+  warnings.warn(w); time.sleep(seconds)
+20220620-14:42:06  
+                   ---- 删除中间表
+20220620-14:42:06  drop table if exists kehujingyingbudb.mid_eg_user_test_202012;
+20220620-14:42:06      sql执行完毕
+
+20220620-14:42:06  ---- 返回结果表名：kehujingyingbudb.mid_eg_recent_test_202012
+20220620-14:42:06  ---- 将Info保存至./binaryclassify/eg/traintest~202010~202012/Info~base_test.pkl
+
+20220620-14:42:06  结束时间：2022-06-20 14:42:06
+20220620-14:42:06  耗时：4 s
+                   ###################################################################### 测试集加工
+                    
+20220620-14:42:06  开始时间：2022-06-20 14:42:06
+20220620-14:42:06  参数设置：
+                       Info.iv_limit: 0.05
+                       table_in: kehujingyingbudb.mid_eg_recent_test_202012
+                       stage: create
+                       Info.model_name: 模型示例
+                       step: test
+                       Info.auto_pair2: False
+                       Info.r_limit: 0.95
+
+20220620-14:42:09  ------------------------- 读取数据: kehujingyingbudb.mid_eg_recent_test_202012 2022-06-20 14:42:09 -------------------------
+20220620-14:42:09      src: gp
+20220620-14:42:09      condition: None
+20220620-14:42:09      col_need(38): ['user_acct_month', 'data_use', 'acct_month', 'phone_no_null', 'user_id', 'account_id', 'innet_months', 'age_add', 'user_status', 'last_stop_date', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'if_nolimit', 'if_5g_dinner', 'arpu', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'days_gprs', 'days_call', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'flag_eg']
+20220620-14:42:09      col_del: None
+20220620-14:42:09      col_char(10): ['user_acct_month', 'data_use', 'acct_month', 'phone_no_null', 'user_id', 'account_id', 'user_status', 'if_nolimit', 'if_5g_dinner', 'flag_eg']
+20220620-14:42:09      col_num(27): ['innet_months', 'age_add', 'dinner_fee', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'arpu', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_now_defer', 'gprs_flow_roam', 'call_dura_roam', 'days_gprs', 'days_call', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game']
+20220620-14:42:09      col_date(1): ['last_stop_date']
+20220620-14:42:09      nrows: None
+20220620-14:42:09      if_coltolower: True
+20220620-14:42:09      kwargs: {}
+
+20220620-14:42:09      读取
+20220620-14:42:10      shape: (2636, 38)
+
+20220620-14:42:10  -------------------------读取完毕: (2636, 38) 2022-06-20 14:42:10 -------------------------
+
+20220620-14:42:10  手动衍生_py7个字段: {'monthsremain_last_stop_date': '最后停机时间：剩余时长', 'days_call_p': '通话天数占比', 'days_call_p_1': '通话天数占比_1', 'days_call_p_2': '通话天数占比_2', 'days_call_p_3': '通话天数占比_3', 'days_call_p_4': '通话天数占比_4', 'greatest_gprs_app': 'app偏好'}
+20220620-14:42:10  monthsremain_last_stop_date: last_stop_date - current_date
+20220620-14:42:10  days_call_p: days_call / days_month
+20220620-14:42:10  days_call_p_1: days_call_p + days_gprs
+20220620-14:42:10  days_call_p_2: days_call_p_1 + days_gprs
+20220620-14:42:10  days_call_p_3: days_call_p_2 + days_gprs
+20220620-14:42:10  days_call_p_4: days_call_p_3 + days_gprs
+20220620-14:42:10  greatest_gprs_app: {'gprs_flow_video': 'video', 'gprs_flow_short': 'short', 'gprs_flow_music': 'music', 'gprs_flow_commu': 'commu', 'gprs_flow_game': 'game'}
+20220620-14:42:10  数据量: (2636, 45)
+
+20220620-14:42:10  检查数据
+20220620-14:42:10  各账期数据量分布：
+                       202010  data_timeout    1000
+                       202011  data_timeout    636
+                       202012  data_timeout    1000
+                       dtype: int64
+20220620-14:42:10  各账期数据量不一致
+20220620-14:42:10  以nan填充缺少账期的记录
+20220620-14:42:10      修改后：
+                       202010  data_timeout    1000
+                       202011  data_timeout    1000
+                       202012  data_timeout    1000
+                       dtype: int64)
+20220620-14:42:10  
+                   diff_limitweiNone,不考察近n月字段各账期取值分布, dis_exam返回None！
+
+
+20220620-14:42:10  填充数值型&类别型字段缺失值
+20220620-14:42:11  日期型字段缺失值情况：
+                       last_stop_date    364
+                       dtype: int64
+
+20220620-14:42:11  正负例分布：
+                       data_timeout  202012  0    851
+                       data_timeout  202012  1    149
+                       dtype: int64
+
+                   ----------------------------------------- 当月 类别型 onthot 
+
+                   ----------------------------------------- 当月 数值型&类别型 原始数据 
+20220620-14:42:11  (1000, 33)
+20220620-14:42:11  筛选衍生字段的 原始/手动衍生_sql 字段
+
+                   ----------------------------------------- 近n月 数值型 近3月均值 
+20220620-14:42:11  字段个数：19, 添加字段：None
+20220620-14:42:11  (1000, 52)
+
+                   ----------------------------------------- 近n月 数值型 近3月离散系数 
+20220620-14:42:11  字段个数：10, 添加字段：None
+20220620-14:42:11  (1000, 62)
+
+                   ----------------------------------------- 近n月 数值型 近3月波动性 
+20220620-14:42:11  字段个数：8, 添加字段：None
+20220620-14:42:11  (1000, 70)
+
+                   ----------------------------------------- 近n月 数值型 近3月成长率 
+20220620-14:42:11  字段个数：12, 添加字段：None
+20220620-14:42:11  (1000, 82)
+
+                   ----------------------------------------- 近n月 数值型 近3月最大值 
+20220620-14:42:11  字段个数：20, 添加字段：None
+20220620-14:42:11  (1000, 102)
+
+                   ----------------------------------------- 近n月 数值型 近3月最小值 
+20220620-14:42:11  字段个数：13, 添加字段：None
+20220620-14:42:11  (1000, 115)
+
+                   ----------------------------------------- 近n月 数值型 近3月标准差 
+20220620-14:42:11  字段个数：16, 添加字段：None
+20220620-14:42:11  (1000, 131)
+
+                   ----------------------------------------- 近n月 数值型 大于x的月份数 
+20220620-14:42:11  ('more0cnt', '近3月大于0的月份数')
+20220620-14:42:11  ('moreq25cnt', '近3月大于第一四分位数的月份数')
+20220620-14:42:11  (1000, 144)
+
+                   ----------------------------------------- 近n月 类别型 取某值的月份数 
+20220620-14:42:11  字段个数：2, 添加字段：None
+20220620-14:42:11  (1000, 146)
+
+                   ----------------------------------------- 汇总最终宽表 
+20220620-14:42:11  table.shape:(1000, 146)
+
+20220620-14:42:11  保存宽表结果至：./binaryclassify/eg/traintest~202010~202012/test_data~202012.csv
+
+20220620-14:42:11  计算字段之间的相关性系数
+20220620-14:42:11  
+                       count    8646.0
+                       mean    0.175
+                       std    0.193
+                       min    0.0
+                       25%    0.045
+                       50%    0.109
+                       75%    0.227
+                       max    1.0
+                       dtype: float64
+
+
+                   ------------------------------- 计算宽表字段psi ------------------------------------ 
+                    
+                    20220620-14:42:11  my toolmodule.dataprep.PsiTransformer_DF transform
+                    20220620-14:42:11      开始时间：2022-06-20 14:42:11
+                    20220620-14:42:11      data in : (1000, 146)
+                    20220620-14:42:11      self已带有id_X属性 2267646353928
+                    20220620-14:42:11      首次从X获取id_X_new属性 2267617047160
+                    20220620-14:42:11      data in2: (1000, 137)
+                    20220620-14:42:11      对134个数值字段进行分箱：['innet_months', 'age_add', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_flow_roam', 'call_dura_roam', 'days_call_p_4', 'nos_calling', 'nos_calling_diff', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'avg__calling_diff_dura', 'avg__dinner_fee', 'avg__nos_calling', 'avg__call_use', 'avg__call_dura_roam', 'avg__gprs_flow_video', 'avg__calling_dura', 'avg__gprs_last_defer', 'avg__calling_diff_cnt', 'avg__gprs_resource', 'avg__calling_cnt', 'avg__nos_calling_diff', 'avg__gprs_now_defer', 'avg__gprs_flow_busy', 'avg__arpu', 'avg__monthsremain_last_stop_date', 'avg__gprs_flow_game', 'avg__gprs_now_rest', 'avg__gprs_flow_roam', 'sep__calling_diff_dura', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__gprs_flow_video', 'sep__calling_dura', 'sep__calling_diff_cnt', 'sep__calling_cnt', 'sep__gprs_flow_music', 'sep__monthsremain_last_stop_date', 'sep__gprs_now_rest', 'wave__gprs_flow_commu', 'wave__call_use', 'wave__gprs_flow_video', 'wave__gprs_last_defer', 'wave__gprs_flow_short', 'wave__gprs_flow_music', 'wave__gprs_now_defer', 'wave__gprs_now_rest', 'grow__dinner_fee', 'grow__call_use', 'grow__gprs_last_defer', 'grow__calling_diff_cnt', 'grow__calling_cnt', 'grow__gprs_flow_music', 'grow__gprs_now_defer', 'grow__gprs_flow_busy', 'grow__arpu', 'grow__gprs_flow_game', 'grow__gprs_now_rest', 'grow__gprs_flow_roam', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__nos_calling', 'max__call_use', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_dura', 'max__gprs_last_defer', 'max__calling_diff_cnt', 'max__gprs_flow_short', 'max__gprs_resource', 'max__calling_cnt', 'max__nos_calling_diff', 'max__gprs_flow_music', 'max__gprs_now_defer', 'max__gprs_flow_busy', 'max__arpu', 'max__gprs_now_rest', 'max__gprs_flow_roam', 'min__gprs_flow_commu', 'min__dinner_fee', 'min__call_use', 'min__gprs_flow_video', 'min__gprs_last_defer', 'min__gprs_flow_short', 'min__gprs_resource', 'min__gprs_flow_music', 'min__gprs_now_defer', 'min__gprs_flow_busy', 'min__arpu', 'min__gprs_now_rest', 'min__gprs_flow_roam', 'std__calling_diff_dura', 'std__gprs_flow_commu', 'std__dinner_fee', 'std__nos_calling', 'std__call_use', 'std__call_dura_roam', 'std__calling_dura', 'std__gprs_last_defer', 'std__calling_diff_cnt', 'std__gprs_resource', 'std__calling_cnt', 'std__nos_calling_diff', 'std__gprs_flow_busy', 'std__arpu', 'std__gprs_now_rest', 'std__gprs_flow_roam', 'more0cnt__nos_calling', 'more0cnt__calling_cnt', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__call_use', 'moreq25cnt__gprs_flow_video', 'moreq25cnt__calling_dura', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_resource', 'moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是']
+                    20220620-14:42:11      timedata_timeout 计算稳定度（不区分正负例）：self.col_psi_all_
+                    20220620-14:42:19      data_timeout 计算稳定度（区分正负例）：self.col_psi_PN_
+                    20220620-14:42:31      data out: (1000, 137)
+                    20220620-14:42:31      transform轨迹：PsiTransformer_DF(Ncase='0', Pcase='1', bins=None, col_ignore=None, fit_pop_all=False, precision=6, , psi_limit=0.1, trans_na_error=True, warn_mark=' PsiTransformer')
+                    20220620-14:42:31      结束时间：2022-06-20 14:42:31 耗时(20s)
+20220620-14:42:31  保存Psi至：./binaryclassify/eg/traintest~202010~202012/test_Psi~202010~202012.pkl
+20220620-14:42:31  保存dis_exam至：./binaryclassify/eg/traintest~202010~202012/test_dis_exam~202012.pkl
+20220620-14:42:31  结束时间：2022-06-20 14:42:31
+20220620-14:42:31  耗时：25 s
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: stage取值为create时,r_limit, iv_limit参数无效，将被忽略
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer timedata_timeout 计算稳定性(不区分正负例) ['account_id']字段多出727个取值, .head(5):
+                      old  new
+field      value              
+account_id 102196712  NaN  1.0
+           102197121  NaN  1.0
+           102300686  NaN  1.0
+           103604981  NaN  1.0
+           103676343  NaN  1.0
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer timedata_timeout 计算稳定性(不区分正负例)，11个字段稳定性>=psi_limit（0.1）：
+grow__gprs_last_defer               0.962445
+sep__monthsremain_last_stop_date    0.497981
+grow__gprs_now_rest                 0.441582
+grow__calling_cnt                   0.372863
+sep__gprs_flow_video                0.296582
+grow__gprs_now_defer                0.274135
+sep__gprs_flow_commu                0.220594
+wave__gprs_flow_commu               0.147599
+wave__gprs_flow_music               0.147363
+wave__gprs_flow_short               0.115604
+wave__gprs_flow_video               0.113925
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer data_timeout 计算稳定性(区分正负例)-正例（1） ['account_id']字段多出571个取值, .head(5):
+                      old  new
+field      value              
+account_id 102196712  NaN  1.0
+           102197121  NaN  1.0
+           102300686  NaN  1.0
+           103676343  NaN  1.0
+           103679195  NaN  1.0
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer data_timeout 计算稳定性(区分正负例)-负例（0） ['account_id']字段多出571个取值, .head(5):
+                      old  new
+field      value              
+account_id 102196712  NaN  1.0
+           102197121  NaN  1.0
+           102300686  NaN  1.0
+           103676343  NaN  1.0
+           103679195  NaN  1.0
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:      PsiTransformer data_timeout 计算稳定性(区分正负例) ，14个字段稳定性>=psi_limit（0.1）：
+grow__gprs_last_defer               1.038329
+sep__monthsremain_last_stop_date    0.752976
+wave__gprs_flow_music               0.501647
+grow__calling_cnt                   0.490093
+sep__gprs_flow_video                0.481734
+grow__gprs_now_rest                 0.446967
+wave__gprs_flow_commu               0.372743
+grow__gprs_now_defer                0.352131
+sep__gprs_flow_commu                0.302299
+grow__gprs_flow_roam                0.258629
+wave__gprs_flow_video               0.251578
+wave__gprs_flow_short               0.227270
+sep__gprs_flow_music                0.227147
+account_id                          0.172205
+dtype: float64
+  convert=self.convert_dtype,
+
+                   ###################################################################### 创建数据处理流水线、算法序列
+                    
+20220620-14:42:31  创建数据转换流水线1
+
+
+D:\工作\模型脚本\ModelProject\selfmodule\toolmodule\dataprep.py:9: UserWarning: Pipeline_DF：verbose参数值被赋予print_indent后默认参数设置为None
+  import time
+
+
+D:\工作\模型脚本\ModelProject\selfmodule\toolmodule\dataprep.py:9: UserWarning: FeatureUnion_DF：verbose参数值被赋予print_indent后默认参数设置为None
+  import time
+20220620-14:42:32  创建数据转换流水线2
+20220620-14:42:32  创建数据转换流水线3
+20220620-14:42:32  创建算法序列
+
+                   ###################################################################### 训练测试过程
+                    
+20220620-14:42:32  开始时间：2022-06-20 14:42:32
+20220620-14:42:32  模型名称：模型示例
+20220620-14:42:32  参数设置：
+                       Info.model_name: 模型示例
+                       Info.trainproc_ratiolist: [1, 2, 10]
+                       field_comment: (146, 16)
+                       Info.freq_limit: 0.95
+                       Info.unique_limit: 5000
+                       Info.iv_limit: 0.05
+                       Info.r_limit: 0.95
+                       Info.random_state: None
+20220620-14:42:32  mark: ~202010~202012
+20220620-14:42:32  目标字段：flag_eg; 正负例取值：1、0
+20220620-14:42:32  field_comment.shape: (146, 16)
+20220620-14:42:32      len(col_need): 146
+20220620-14:42:32      删除field_comment中into_model取值为‘删除’的3个字段：['phone_no_null', 'last_stop_date', 'flag_eg']
+20220620-14:42:32      len(col_need): 146
+20220620-14:42:32      删除Info.col_del中的1个字段：{'user_acct_month'}
+20220620-14:42:32      len(col_need): 145
+
+20220620-14:42:32      删除Info.supply_other、col_mark中的4个字段：{'call_fee_local', 'last_stop_date', 'sms_cnt', 'phone_no_null'}
+20220620-14:42:32      len(col_need): 141
+
+20220620-14:42:32  ------------------------- 读取数据: ./binaryclassify/eg/traintest~202010~202012/train_data~202010.csv 2022-06-20 14:42:32 -------------------------
+20220620-14:42:32      src: file
+20220620-14:42:32      condition: None
+20220620-14:42:32      col_need(141): ['data_use', 'acct_month', 'user_id', 'account_id', 'innet_months', 'age_add', 'user_status', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_flow_roam', 'call_dura_roam', 'days_call_p_4', 'nos_calling', 'nos_calling_diff', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'greatest_gprs_app', 'avg__calling_diff_dura', 'avg__dinner_fee', 'avg__nos_calling', 'avg__call_use', 'avg__call_dura_roam', 'avg__gprs_flow_video', 'avg__calling_dura', 'avg__gprs_last_defer', 'avg__calling_diff_cnt', 'avg__gprs_resource', 'avg__calling_cnt', 'avg__nos_calling_diff', 'avg__gprs_now_defer', 'avg__gprs_flow_busy', 'avg__arpu', 'avg__monthsremain_last_stop_date', 'avg__gprs_flow_game', 'avg__gprs_now_rest', 'avg__gprs_flow_roam', 'sep__calling_diff_dura', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__gprs_flow_video', 'sep__calling_dura', 'sep__calling_diff_cnt', 'sep__calling_cnt', 'sep__gprs_flow_music', 'sep__monthsremain_last_stop_date', 'sep__gprs_now_rest', 'wave__gprs_flow_commu', 'wave__call_use', 'wave__gprs_flow_video', 'wave__gprs_last_defer', 'wave__gprs_flow_short', 'wave__gprs_flow_music', 'wave__gprs_now_defer', 'wave__gprs_now_rest', 'grow__dinner_fee', 'grow__call_use', 'grow__gprs_last_defer', 'grow__calling_diff_cnt', 'grow__calling_cnt', 'grow__gprs_flow_music', 'grow__gprs_now_defer', 'grow__gprs_flow_busy', 'grow__arpu', 'grow__gprs_flow_game', 'grow__gprs_now_rest', 'grow__gprs_flow_roam', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__nos_calling', 'max__call_use', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_dura', 'max__gprs_last_defer', 'max__calling_diff_cnt', 'max__gprs_flow_short', 'max__gprs_resource', 'max__calling_cnt', 'max__nos_calling_diff', 'max__gprs_flow_music', 'max__gprs_now_defer', 'max__gprs_flow_busy', 'max__arpu', 'max__gprs_now_rest', 'max__gprs_flow_roam', 'min__gprs_flow_commu', 'min__dinner_fee', 'min__call_use', 'min__gprs_flow_video', 'min__gprs_last_defer', 'min__gprs_flow_short', 'min__gprs_resource', 'min__gprs_flow_music', 'min__gprs_now_defer', 'min__gprs_flow_busy', 'min__arpu', 'min__gprs_now_rest', 'min__gprs_flow_roam', 'std__calling_diff_dura', 'std__gprs_flow_commu', 'std__dinner_fee', 'std__nos_calling', 'std__call_use', 'std__call_dura_roam', 'std__calling_dura', 'std__gprs_last_defer', 'std__calling_diff_cnt', 'std__gprs_resource', 'std__calling_cnt', 'std__nos_calling_diff', 'std__gprs_flow_busy', 'std__arpu', 'std__gprs_now_rest', 'std__gprs_flow_roam', 'more0cnt__nos_calling', 'more0cnt__calling_cnt', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__call_use', 'moreq25cnt__gprs_flow_video', 'moreq25cnt__calling_dura', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_resource', 'moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是', 'flag_eg']
+20220620-14:42:32      col_del: None
+20220620-14:42:32      col_char(9): ['user_acct_month', 'data_use', 'acct_month', 'phone_no_null', 'user_id', 'account_id', 'user_status', 'greatest_gprs_app', 'flag_eg']
+20220620-14:42:32      col_num(136): ['innet_months', 'age_add', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_flow_roam', 'call_dura_roam', 'days_call_p_4', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'avg__calling_diff_dura', 'avg__dinner_fee', 'avg__nos_calling', 'avg__call_use', 'avg__call_dura_roam', 'avg__gprs_flow_video', 'avg__calling_dura', 'avg__gprs_last_defer', 'avg__calling_diff_cnt', 'avg__gprs_resource', 'avg__calling_cnt', 'avg__nos_calling_diff', 'avg__gprs_now_defer', 'avg__gprs_flow_busy', 'avg__arpu', 'avg__monthsremain_last_stop_date', 'avg__gprs_flow_game', 'avg__gprs_now_rest', 'avg__gprs_flow_roam', 'sep__calling_diff_dura', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__gprs_flow_video', 'sep__calling_dura', 'sep__calling_diff_cnt', 'sep__calling_cnt', 'sep__gprs_flow_music', 'sep__monthsremain_last_stop_date', 'sep__gprs_now_rest', 'wave__gprs_flow_commu', 'wave__call_use', 'wave__gprs_flow_video', 'wave__gprs_last_defer', 'wave__gprs_flow_short', 'wave__gprs_flow_music', 'wave__gprs_now_defer', 'wave__gprs_now_rest', 'grow__dinner_fee', 'grow__call_use', 'grow__gprs_last_defer', 'grow__calling_diff_cnt', 'grow__calling_cnt', 'grow__gprs_flow_music', 'grow__gprs_now_defer', 'grow__gprs_flow_busy', 'grow__arpu', 'grow__gprs_flow_game', 'grow__gprs_now_rest', 'grow__gprs_flow_roam', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__nos_calling', 'max__call_use', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_dura', 'max__gprs_last_defer', 'max__calling_diff_cnt', 'max__gprs_flow_short', 'max__gprs_resource', 'max__calling_cnt', 'max__nos_calling_diff', 'max__gprs_flow_music', 'max__gprs_now_defer', 'max__gprs_flow_busy', 'max__arpu', 'max__gprs_now_rest', 'max__gprs_flow_roam', 'min__gprs_flow_commu', 'min__dinner_fee', 'min__call_use', 'min__gprs_flow_video', 'min__gprs_last_defer', 'min__gprs_flow_short', 'min__gprs_resource', 'min__gprs_flow_music', 'min__gprs_now_defer', 'min__gprs_flow_busy', 'min__arpu', 'min__gprs_now_rest', 'min__gprs_flow_roam', 'std__calling_diff_dura', 'std__gprs_flow_commu', 'std__dinner_fee', 'std__nos_calling', 'std__call_use', 'std__call_dura_roam', 'std__calling_dura', 'std__gprs_last_defer', 'std__calling_diff_cnt', 'std__gprs_resource', 'std__calling_cnt', 'std__nos_calling_diff', 'std__gprs_flow_busy', 'std__arpu', 'std__gprs_now_rest', 'std__gprs_flow_roam', 'more0cnt__nos_calling', 'more0cnt__calling_cnt', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__call_use', 'moreq25cnt__gprs_flow_video', 'moreq25cnt__calling_dura', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_resource', 'moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是']
+20220620-14:42:32      col_date: None
+20220620-14:42:32      nrows: None
+20220620-14:42:32      if_coltolower: False
+20220620-14:42:32      kwargs: {}
+
+20220620-14:42:32      读取
+20220620-14:42:32  -------------------------读取完毕: (3500, 141) 2022-06-20 14:42:32 -------------------------
+
+20220620-14:42:32  ------------------------- 读取数据: ./binaryclassify/eg/traintest~202010~202012/test_data~202012.csv 2022-06-20 14:42:32 -------------------------
+20220620-14:42:32      src: file
+20220620-14:42:32      condition: None
+20220620-14:42:32      col_need(141): ['data_use', 'acct_month', 'user_id', 'account_id', 'innet_months', 'age_add', 'user_status', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_flow_roam', 'call_dura_roam', 'days_call_p_4', 'nos_calling', 'nos_calling_diff', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'greatest_gprs_app', 'avg__calling_diff_dura', 'avg__dinner_fee', 'avg__nos_calling', 'avg__call_use', 'avg__call_dura_roam', 'avg__gprs_flow_video', 'avg__calling_dura', 'avg__gprs_last_defer', 'avg__calling_diff_cnt', 'avg__gprs_resource', 'avg__calling_cnt', 'avg__nos_calling_diff', 'avg__gprs_now_defer', 'avg__gprs_flow_busy', 'avg__arpu', 'avg__monthsremain_last_stop_date', 'avg__gprs_flow_game', 'avg__gprs_now_rest', 'avg__gprs_flow_roam', 'sep__calling_diff_dura', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__gprs_flow_video', 'sep__calling_dura', 'sep__calling_diff_cnt', 'sep__calling_cnt', 'sep__gprs_flow_music', 'sep__monthsremain_last_stop_date', 'sep__gprs_now_rest', 'wave__gprs_flow_commu', 'wave__call_use', 'wave__gprs_flow_video', 'wave__gprs_last_defer', 'wave__gprs_flow_short', 'wave__gprs_flow_music', 'wave__gprs_now_defer', 'wave__gprs_now_rest', 'grow__dinner_fee', 'grow__call_use', 'grow__gprs_last_defer', 'grow__calling_diff_cnt', 'grow__calling_cnt', 'grow__gprs_flow_music', 'grow__gprs_now_defer', 'grow__gprs_flow_busy', 'grow__arpu', 'grow__gprs_flow_game', 'grow__gprs_now_rest', 'grow__gprs_flow_roam', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__nos_calling', 'max__call_use', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_dura', 'max__gprs_last_defer', 'max__calling_diff_cnt', 'max__gprs_flow_short', 'max__gprs_resource', 'max__calling_cnt', 'max__nos_calling_diff', 'max__gprs_flow_music', 'max__gprs_now_defer', 'max__gprs_flow_busy', 'max__arpu', 'max__gprs_now_rest', 'max__gprs_flow_roam', 'min__gprs_flow_commu', 'min__dinner_fee', 'min__call_use', 'min__gprs_flow_video', 'min__gprs_last_defer', 'min__gprs_flow_short', 'min__gprs_resource', 'min__gprs_flow_music', 'min__gprs_now_defer', 'min__gprs_flow_busy', 'min__arpu', 'min__gprs_now_rest', 'min__gprs_flow_roam', 'std__calling_diff_dura', 'std__gprs_flow_commu', 'std__dinner_fee', 'std__nos_calling', 'std__call_use', 'std__call_dura_roam', 'std__calling_dura', 'std__gprs_last_defer', 'std__calling_diff_cnt', 'std__gprs_resource', 'std__calling_cnt', 'std__nos_calling_diff', 'std__gprs_flow_busy', 'std__arpu', 'std__gprs_now_rest', 'std__gprs_flow_roam', 'more0cnt__nos_calling', 'more0cnt__calling_cnt', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__call_use', 'moreq25cnt__gprs_flow_video', 'moreq25cnt__calling_dura', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_resource', 'moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是', 'flag_eg']
+20220620-14:42:32      col_del: None
+20220620-14:42:32      col_char(9): ['user_acct_month', 'data_use', 'acct_month', 'phone_no_null', 'user_id', 'account_id', 'user_status', 'greatest_gprs_app', 'flag_eg']
+20220620-14:42:32      col_num(136): ['innet_months', 'age_add', 'gprs_last_defer', 'gprs_resource', 'gprs_now_rest', 'call_use', 'calling_cnt', 'calling_dura', 'calling_diff_cnt', 'calling_diff_dura', 'gprs_flow_busy', 'gprs_flow_roam', 'call_dura_roam', 'days_call_p_4', 'nos_calling', 'nos_calling_diff', 'sms_cnt', 'call_fee_local', 'gprs_flow_video', 'gprs_flow_short', 'gprs_flow_music', 'gprs_flow_commu', 'gprs_flow_game', 'avg__calling_diff_dura', 'avg__dinner_fee', 'avg__nos_calling', 'avg__call_use', 'avg__call_dura_roam', 'avg__gprs_flow_video', 'avg__calling_dura', 'avg__gprs_last_defer', 'avg__calling_diff_cnt', 'avg__gprs_resource', 'avg__calling_cnt', 'avg__nos_calling_diff', 'avg__gprs_now_defer', 'avg__gprs_flow_busy', 'avg__arpu', 'avg__monthsremain_last_stop_date', 'avg__gprs_flow_game', 'avg__gprs_now_rest', 'avg__gprs_flow_roam', 'sep__calling_diff_dura', 'sep__gprs_flow_commu', 'sep__call_use', 'sep__gprs_flow_video', 'sep__calling_dura', 'sep__calling_diff_cnt', 'sep__calling_cnt', 'sep__gprs_flow_music', 'sep__monthsremain_last_stop_date', 'sep__gprs_now_rest', 'wave__gprs_flow_commu', 'wave__call_use', 'wave__gprs_flow_video', 'wave__gprs_last_defer', 'wave__gprs_flow_short', 'wave__gprs_flow_music', 'wave__gprs_now_defer', 'wave__gprs_now_rest', 'grow__dinner_fee', 'grow__call_use', 'grow__gprs_last_defer', 'grow__calling_diff_cnt', 'grow__calling_cnt', 'grow__gprs_flow_music', 'grow__gprs_now_defer', 'grow__gprs_flow_busy', 'grow__arpu', 'grow__gprs_flow_game', 'grow__gprs_now_rest', 'grow__gprs_flow_roam', 'max__calling_diff_dura', 'max__gprs_flow_commu', 'max__dinner_fee', 'max__nos_calling', 'max__call_use', 'max__call_dura_roam', 'max__gprs_flow_video', 'max__calling_dura', 'max__gprs_last_defer', 'max__calling_diff_cnt', 'max__gprs_flow_short', 'max__gprs_resource', 'max__calling_cnt', 'max__nos_calling_diff', 'max__gprs_flow_music', 'max__gprs_now_defer', 'max__gprs_flow_busy', 'max__arpu', 'max__gprs_now_rest', 'max__gprs_flow_roam', 'min__gprs_flow_commu', 'min__dinner_fee', 'min__call_use', 'min__gprs_flow_video', 'min__gprs_last_defer', 'min__gprs_flow_short', 'min__gprs_resource', 'min__gprs_flow_music', 'min__gprs_now_defer', 'min__gprs_flow_busy', 'min__arpu', 'min__gprs_now_rest', 'min__gprs_flow_roam', 'std__calling_diff_dura', 'std__gprs_flow_commu', 'std__dinner_fee', 'std__nos_calling', 'std__call_use', 'std__call_dura_roam', 'std__calling_dura', 'std__gprs_last_defer', 'std__calling_diff_cnt', 'std__gprs_resource', 'std__calling_cnt', 'std__nos_calling_diff', 'std__gprs_flow_busy', 'std__arpu', 'std__gprs_now_rest', 'std__gprs_flow_roam', 'more0cnt__nos_calling', 'more0cnt__calling_cnt', 'moreq25cnt__gprs_flow_commu', 'moreq25cnt__nos_calling', 'moreq25cnt__call_use', 'moreq25cnt__gprs_flow_video', 'moreq25cnt__calling_dura', 'moreq25cnt__gprs_last_defer', 'moreq25cnt__gprs_flow_short', 'moreq25cnt__gprs_resource', 'moreq25cnt__gprs_flow_music', 'moreq25cnt__gprs_flow_busy', 'moreq25cnt__arpu', 'valuecnt__if_nolimit~是', 'valuecnt__if_5g_dinner~是']
+20220620-14:42:32      col_date: None
+20220620-14:42:32      nrows: None
+20220620-14:42:32      if_coltolower: False
+20220620-14:42:32      kwargs: {}
+
+20220620-14:42:32      读取
+20220620-14:42:32  -------------------------读取完毕: (1000, 141) 2022-06-20 14:42:32 -------------------------
+
+20220620-14:42:32  合并训练、测试数据
+20220620-14:42:32  data.shape: (4500, 141)
+
+20220620-14:42:32  数据分布：
+                       202010  data_timein  0    426
+                       202010  data_timein  1    74
+                       202010  data_train  0    2000
+                       202010  data_train  1    1000
+                       202012  data_timeout  0    851
+                       202012  data_timeout  1    149
+                       dtype: int64
+
+20220620-14:42:32  数据集整合：
+20220620-14:42:32  -------------------------- train --------------------------
+20220620-14:42:32  校验账期:                    20220620-14:42:32      通过
+20220620-14:42:32  trainproc_ratiolist：[1, 2, 10]
+20220620-14:42:32  正负例实际比例最高：1:2.0，将trainproc_ratiolist纠正为:[1, 2]
+20220620-14:42:32  随机抽样 1:1
+20220620-14:42:32      正例样本：1000
+20220620-14:42:32      负例样本：2000
+20220620-14:42:32          从负例中随机抽取1000（1000*1）
+20220620-14:42:32  随机抽样 1:2
+20220620-14:42:32      正例样本：1000
+20220620-14:42:32      负例样本：2000
+20220620-14:42:32          从负例中随机抽取2000（1000*2）
+20220620-14:42:32  -------------------------- timein --------------------------
+20220620-14:42:32  校验账期:                    20220620-14:42:32      通过
+20220620-14:42:32  -------------------------- timeout --------------------------
+20220620-14:42:32  校验账期:                    20220620-14:42:32      通过
+20220620-14:42:32  具备data_timeout数据集，以其测试效果评估模型
+
+20220620-14:42:32  遍历不同的抽样比例、数据预处理流水线、算法 进行训练测试:
+
+20220620-14:42:32  ------------------------------------------ 抽样比例：ratio_1_1 ------------------------------------------
+
+20220620-14:42:32  ------------------------- 流水线：pipeline1 -------------------------
+20220620-14:42:32  train_X: (2000, 139)
+20220620-14:43:01  转换完毕，进入模型(X+Y)：(1000, 119)
+
+20220620-14:43:01  训练测试 LGBMClassifier_DF - boosting_type='gbdt', colsample_bytree=0.9916168768550919, importance_type='split', is_unbalance=False, learning_rate=0.02269504678452342, max_depth=-1, min_child_samples=165, min_child_weight=0.001, min_split_gain=0.0, n_estimators=169, n_jobs=-1, num_leaves=22, reg_alpha=0.36607148130872236, reg_lambda=0.10119960284131346, silent=True, subsample=0.9304256141925331, subsample_for_bin=40000, subsample_freq=0
+20220620-14:43:02  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          4      40.0%       2.7%        2.7
+                                5.0%       50         23      46.0%      15.4%        3.1
+                               10.0%      100         40      40.0%      26.8%        2.7
+                               20.2%      202         71      35.1%      47.7%        2.4
+                               30.0%      300         84      28.0%      56.4%        1.9
+                               40.0%      400        105      26.2%      70.5%        1.8
+                               50.0%      500        117      23.4%      78.5%        1.6
+                               60.0%      600        126      21.0%      84.6%        1.4
+                               70.0%      700        134      19.1%      89.9%        1.3
+                               80.0%      800        140      17.5%      94.0%        1.2
+                               91.2%      912        146      16.0%      98.0%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:43:02  训练测试 LGBMClassifier_DF - boosting_type='dart', objective='binary', num_leaves=511, learning_rate=0.1, colsample_bytree=0.8, subsample=0.6, subsample_freq=20
+20220620-14:43:02  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          6      60.0%       4.0%        4.0
+                                5.0%       50         22      44.0%      14.8%        3.0
+                               10.0%      100         47      47.0%      31.5%        3.2
+                               20.0%      200         65      32.5%      43.6%        2.2
+                               30.0%      300         85      28.3%      57.0%        1.9
+                               40.0%      400        100      25.0%      67.1%        1.7
+                               50.0%      500        114      22.8%      76.5%        1.5
+                               60.0%      600        122      20.3%      81.9%        1.4
+                               70.1%      701        136      19.4%      91.3%        1.3
+                               80.0%      800        140      17.5%      94.0%        1.2
+                               90.1%      901        147      16.3%      98.7%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:43:02  训练测试 XGBClassifier_DF - 默认参数
+20220620-14:43:03  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          4      40.0%       2.7%        2.7
+                                5.0%       50         24      48.0%      16.1%        3.2
+                               10.0%      100         42      42.0%      28.2%        2.8
+                               20.0%      200         69      34.5%      46.3%        2.3
+                               30.0%      300         90      30.0%      60.4%        2.0
+                               40.0%      400        109      27.3%      73.2%        1.8
+                               50.0%      500        120      24.0%      80.5%        1.6
+                               60.0%      600        127      21.2%      85.2%        1.4
+                               70.0%      700        136      19.4%      91.3%        1.3
+                               80.0%      800        142      17.8%      95.3%        1.2
+                               90.0%      900        143      15.9%      96.0%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:43:03  训练测试 RandomForestClassifier_DF - 默认参数
+20220620-14:43:04  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                2.7%       27         13      48.1%       8.7%        3.2
+                                7.4%       74         32      43.2%      21.5%        2.9
+                               13.3%      133         52      39.1%      34.9%        2.6
+                               20.7%      207         74      35.7%      49.7%        2.4
+                               30.8%      308         88      28.6%      59.1%        1.9
+                               43.1%      431        109      25.3%      73.2%        1.7
+                               57.6%      576        124      21.5%      83.2%        1.4
+                               60.1%      601        129      21.5%      86.6%        1.4
+                               72.7%      727        138      19.0%      92.6%        1.3
+                               84.6%      846        144      17.0%      96.6%        1.1
+                               94.3%      943        147      15.6%      98.7%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:43:04  训练测试 RandomForestClassifier_DF - n_estimators=500, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000
+20220620-14:43:04  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                                0.0%        0          0       nan%       0.0%        NaN
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                                0.0%        0          0       nan%       0.0%        NaN
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:43:04  训练测试 RandomForestClassifier_DF - n_estimators=100, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000
+20220620-14:43:05  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:43:05  训练测试 LogisticRegression_DF - solver='liblinear'
+20220620-14:43:05  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          2      20.0%       1.3%        1.3
+                                5.0%       50         20      40.0%      13.4%        2.7
+                               10.0%      100         43      43.0%      28.9%        2.9
+                               20.0%      200         67      33.5%      45.0%        2.2
+                               30.0%      300         83      27.7%      55.7%        1.9
+                               40.0%      400        101      25.2%      67.8%        1.7
+                               50.0%      500        116      23.2%      77.9%        1.6
+                               60.0%      600        119      19.8%      79.9%        1.3
+                               69.8%      698        128      18.3%      85.9%        1.2
+                               80.0%      800        134      16.8%      89.9%        1.1
+                               90.0%      900        139      15.4%      93.3%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:43:05  ------------------------- 流水线：pipeline2 -------------------------
+20220620-14:43:05  train_X: (2000, 139)
+20220620-14:43:34  转换完毕，进入模型(X+Y)：(1000, 119)
+
+20220620-14:43:34  训练测试 LGBMClassifier_DF - boosting_type='gbdt', colsample_bytree=0.9916168768550919, importance_type='split', is_unbalance=False, learning_rate=0.02269504678452342, max_depth=-1, min_child_samples=165, min_child_weight=0.001, min_split_gain=0.0, n_estimators=169, n_jobs=-1, num_leaves=22, reg_alpha=0.36607148130872236, reg_lambda=0.10119960284131346, silent=True, subsample=0.9304256141925331, subsample_for_bin=40000, subsample_freq=0
+20220620-14:43:34  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          6      60.0%       4.0%        4.0
+                                5.0%       50         25      50.0%      16.8%        3.4
+                               10.0%      100         39      39.0%      26.2%        2.6
+                               20.0%      200         68      34.0%      45.6%        2.3
+                               30.0%      300         88      29.3%      59.1%        2.0
+                               40.0%      400        111      27.8%      74.5%        1.9
+                               50.0%      500        121      24.2%      81.2%        1.6
+                               60.0%      600        130      21.7%      87.2%        1.5
+                               70.0%      700        137      19.6%      91.9%        1.3
+                               80.0%      800        144      18.0%      96.6%        1.2
+                               90.0%      900        148      16.4%      99.3%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:43:34  训练测试 LGBMClassifier_DF - boosting_type='dart', objective='binary', num_leaves=511, learning_rate=0.1, colsample_bytree=0.8, subsample=0.6, subsample_freq=20
+20220620-14:43:35  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          7      70.0%       4.7%        4.7
+                                5.0%       50         30      60.0%      20.1%        4.0
+                               10.0%      100         49      49.0%      32.9%        3.3
+                               20.0%      200         79      39.5%      53.0%        2.7
+                               30.0%      300        101      33.7%      67.8%        2.3
+                               40.0%      400        117      29.2%      78.5%        2.0
+                               50.0%      500        125      25.0%      83.9%        1.7
+                               60.0%      600        132      22.0%      88.6%        1.5
+                               70.0%      700        138      19.7%      92.6%        1.3
+                               80.0%      800        142      17.8%      95.3%        1.2
+                               90.0%      900        147      16.3%      98.7%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:43:35  训练测试 XGBClassifier_DF - 默认参数
+20220620-14:43:36  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          5      50.0%       3.4%        3.4
+                                5.0%       50         24      48.0%      16.1%        3.2
+                               10.0%      100         46      46.0%      30.9%        3.1
+                               20.0%      200         82      41.0%      55.0%        2.8
+                               30.0%      300        103      34.3%      69.1%        2.3
+                               40.0%      400        112      28.0%      75.2%        1.9
+                               50.0%      500        125      25.0%      83.9%        1.7
+                               60.0%      600        136      22.7%      91.3%        1.5
+                               70.0%      700        142      20.3%      95.3%        1.4
+                               80.0%      800        143      17.9%      96.0%        1.2
+                               90.0%      900        146      16.2%      98.0%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:43:36  训练测试 RandomForestClassifier_DF - 默认参数
+20220620-14:43:36  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                2.3%       23         15      65.2%      10.1%        4.4
+                                6.1%       61         30      49.2%      20.1%        3.3
+                               12.4%      124         51      41.1%      34.2%        2.8
+                               20.7%      207         80      38.6%      53.7%        2.6
+                               30.6%      306         97      31.7%      65.1%        2.1
+                               45.7%      457        116      25.4%      77.9%        1.7
+                               61.1%      611        131      21.4%      87.9%        1.4
+                               61.1%      611        131      21.4%      87.9%        1.4
+                               78.7%      787        143      18.2%      96.0%        1.2
+                               91.6%      916        148      16.2%      99.3%        1.1
+                               91.6%      916        148      16.2%      99.3%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:43:36  训练测试 RandomForestClassifier_DF - n_estimators=500, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000
+20220620-14:43:37  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                                0.0%        0          0       nan%       0.0%        NaN
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                                0.0%        0          0       nan%       0.0%        NaN
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:43:37  训练测试 RandomForestClassifier_DF - n_estimators=100, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000
+20220620-14:43:37  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:43:37  训练测试 LogisticRegression_DF - solver='liblinear'
+20220620-14:43:37  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          7      70.0%       4.7%        4.7
+                                5.0%       50         25      50.0%      16.8%        3.4
+                               10.0%      100         39      39.0%      26.2%        2.6
+                               20.0%      200         56      28.0%      37.6%        1.9
+                               30.0%      300         83      27.7%      55.7%        1.9
+                               40.0%      400        100      25.0%      67.1%        1.7
+                               50.0%      500        111      22.2%      74.5%        1.5
+                               60.0%      600        122      20.3%      81.9%        1.4
+                               70.0%      700        127      18.1%      85.2%        1.2
+                               80.0%      800        136      17.0%      91.3%        1.1
+                               90.0%      900        145      16.1%      97.3%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:43:37  ------------------------------------------ 抽样比例：ratio_1_2 ------------------------------------------
+
+20220620-14:43:37  ------------------------- 流水线：pipeline1 -------------------------
+20220620-14:43:37  train_X: (3000, 139)
+20220620-14:44:09  转换完毕，进入模型(X+Y)：(1000, 129)
+
+20220620-14:44:09  训练测试 LGBMClassifier_DF - boosting_type='gbdt', colsample_bytree=0.9916168768550919, importance_type='split', is_unbalance=False, learning_rate=0.02269504678452342, max_depth=-1, min_child_samples=165, min_child_weight=0.001, min_split_gain=0.0, n_estimators=169, n_jobs=-1, num_leaves=22, reg_alpha=0.36607148130872236, reg_lambda=0.10119960284131346, silent=True, subsample=0.9304256141925331, subsample_for_bin=40000, subsample_freq=0
+20220620-14:44:09  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          5      50.0%       3.4%        3.4
+                                5.0%       50         24      48.0%      16.1%        3.2
+                               10.0%      100         39      39.0%      26.2%        2.6
+                               20.0%      200         72      36.0%      48.3%        2.4
+                               30.0%      300         90      30.0%      60.4%        2.0
+                               40.0%      400        109      27.3%      73.2%        1.8
+                               50.0%      500        118      23.6%      79.2%        1.6
+                               60.0%      600        127      21.2%      85.2%        1.4
+                               70.0%      700        133      19.0%      89.3%        1.3
+                               80.0%      800        141      17.6%      94.6%        1.2
+                               90.0%      900        146      16.2%      98.0%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:44:09  训练测试 LGBMClassifier_DF - boosting_type='dart', objective='binary', num_leaves=511, learning_rate=0.1, colsample_bytree=0.8, subsample=0.6, subsample_freq=20
+20220620-14:44:10  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          7      70.0%       4.7%        4.7
+                                5.0%       50         25      50.0%      16.8%        3.4
+                               10.0%      100         45      45.0%      30.2%        3.0
+                               20.0%      200         71      35.5%      47.7%        2.4
+                               30.0%      300         98      32.7%      65.8%        2.2
+                               40.0%      400        112      28.0%      75.2%        1.9
+                               50.0%      500        122      24.4%      81.9%        1.6
+                               60.0%      600        129      21.5%      86.6%        1.4
+                               70.0%      700        137      19.6%      91.9%        1.3
+                               80.0%      800        142      17.8%      95.3%        1.2
+                               90.1%      901        145      16.1%      97.3%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:44:10  训练测试 XGBClassifier_DF - 默认参数
+20220620-14:44:10  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          5      50.0%       3.4%        3.4
+                                5.0%       50         30      60.0%      20.1%        4.0
+                               10.0%      100         55      55.0%      36.9%        3.7
+                               20.0%      200         83      41.5%      55.7%        2.8
+                               30.0%      300        101      33.7%      67.8%        2.3
+                               40.0%      400        113      28.2%      75.8%        1.9
+                               50.0%      500        124      24.8%      83.2%        1.7
+                               60.0%      600        132      22.0%      88.6%        1.5
+                               70.0%      700        137      19.6%      91.9%        1.3
+                               80.0%      800        140      17.5%      94.0%        1.2
+                               90.0%      900        145      16.1%      97.3%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:44:10  训练测试 RandomForestClassifier_DF - 默认参数
+20220620-14:44:11  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                2.1%       21         14      66.7%       9.4%        4.5
+                                5.1%       51         27      52.9%      18.1%        3.6
+                               16.3%      163         69      42.3%      46.3%        2.8
+                               24.3%      243         88      36.2%      59.1%        2.4
+                               36.0%      360        105      29.2%      70.5%        2.0
+                               51.8%      518        121      23.4%      81.2%        1.6
+                               51.8%      518        121      23.4%      81.2%        1.6
+                               67.7%      677        134      19.8%      89.9%        1.3
+                               83.4%      834        143      17.1%      96.0%        1.2
+                               83.4%      834        143      17.1%      96.0%        1.2
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:44:11  训练测试 RandomForestClassifier_DF - n_estimators=500, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000
+20220620-14:44:11  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:44:11  训练测试 RandomForestClassifier_DF - n_estimators=100, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000
+20220620-14:44:12  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:44:12  训练测试 LogisticRegression_DF - solver='liblinear'
+20220620-14:44:12  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          3      30.0%       2.0%        2.0
+                                5.0%       50         23      46.0%      15.4%        3.1
+                               10.0%      100         43      43.0%      28.9%        2.9
+                               20.0%      200         64      32.0%      43.0%        2.1
+                               30.0%      300         87      29.0%      58.4%        1.9
+                               40.0%      400         99      24.8%      66.4%        1.7
+                               50.0%      500        113      22.6%      75.8%        1.5
+                               60.0%      600        126      21.0%      84.6%        1.4
+                               70.0%      700        129      18.4%      86.6%        1.2
+                               80.0%      800        138      17.2%      92.6%        1.2
+                               90.0%      900        143      15.9%      96.0%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:44:12  ------------------------- 流水线：pipeline2 -------------------------
+20220620-14:44:12  train_X: (3000, 139)
+20220620-14:44:44  转换完毕，进入模型(X+Y)：(1000, 129)
+
+20220620-14:44:44  训练测试 LGBMClassifier_DF - boosting_type='gbdt', colsample_bytree=0.9916168768550919, importance_type='split', is_unbalance=False, learning_rate=0.02269504678452342, max_depth=-1, min_child_samples=165, min_child_weight=0.001, min_split_gain=0.0, n_estimators=169, n_jobs=-1, num_leaves=22, reg_alpha=0.36607148130872236, reg_lambda=0.10119960284131346, silent=True, subsample=0.9304256141925331, subsample_for_bin=40000, subsample_freq=0
+20220620-14:44:44  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          6      60.0%       4.0%        4.0
+                                5.0%       50         25      50.0%      16.8%        3.4
+                               10.0%      100         42      42.0%      28.2%        2.8
+                               20.0%      200         74      37.0%      49.7%        2.5
+                               30.0%      300         93      31.0%      62.4%        2.1
+                               40.0%      400        110      27.5%      73.8%        1.8
+                               50.0%      500        121      24.2%      81.2%        1.6
+                               60.0%      600        132      22.0%      88.6%        1.5
+                               70.0%      700        138      19.7%      92.6%        1.3
+                               80.0%      800        145      18.1%      97.3%        1.2
+                               90.0%      900        147      16.3%      98.7%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:44:44  训练测试 LGBMClassifier_DF - boosting_type='dart', objective='binary', num_leaves=511, learning_rate=0.1, colsample_bytree=0.8, subsample=0.6, subsample_freq=20
+20220620-14:44:45  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10         10     100.0%       6.7%        6.7
+                                5.0%       50         33      66.0%      22.1%        4.4
+                               10.0%      100         55      55.0%      36.9%        3.7
+                               20.0%      200         93      46.5%      62.4%        3.1
+                               30.0%      300        107      35.7%      71.8%        2.4
+                               40.0%      400        121      30.2%      81.2%        2.0
+                               50.0%      500        128      25.6%      85.9%        1.7
+                               60.0%      600        134      22.3%      89.9%        1.5
+                               70.0%      700        143      20.4%      96.0%        1.4
+                               80.0%      800        145      18.1%      97.3%        1.2
+                               90.0%      900        147      16.3%      98.7%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:44:45  训练测试 XGBClassifier_DF - 默认参数
+20220620-14:44:46  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          6      60.0%       4.0%        4.0
+                                5.0%       50         34      68.0%      22.8%        4.6
+                               10.0%      100         60      60.0%      40.3%        4.0
+                               20.0%      200         91      45.5%      61.1%        3.1
+                               30.0%      300        112      37.3%      75.2%        2.5
+                               40.0%      400        121      30.2%      81.2%        2.0
+                               50.0%      500        129      25.8%      86.6%        1.7
+                               60.0%      600        134      22.3%      89.9%        1.5
+                               70.0%      700        141      20.1%      94.6%        1.4
+                               80.0%      800        145      18.1%      97.3%        1.2
+                               90.0%      900        148      16.4%      99.3%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:44:46  训练测试 RandomForestClassifier_DF - 默认参数
+20220620-14:44:46  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                2.4%       24         15      62.5%      10.1%        4.2
+                                5.4%       54         32      59.3%      21.5%        4.0
+                               15.3%      153         72      47.1%      48.3%        3.2
+                               22.9%      229         87      38.0%      58.4%        2.5
+                               36.6%      366        110      30.1%      73.8%        2.0
+                               55.3%      553        129      23.3%      86.6%        1.6
+                               55.3%      553        129      23.3%      86.6%        1.6
+                               76.0%      760        140      18.4%      94.0%        1.2
+                               76.0%      760        140      18.4%      94.0%        1.2
+                               92.0%      920        149      16.2%     100.0%        1.1
+                               92.0%      920        149      16.2%     100.0%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:44:46  训练测试 RandomForestClassifier_DF - n_estimators=500, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000
+20220620-14:44:47  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:44:47  训练测试 RandomForestClassifier_DF - n_estimators=100, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000
+20220620-14:44:48  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:44:48  训练测试 LogisticRegression_DF - solver='liblinear'
+20220620-14:44:48  data_timeout测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          6      60.0%       4.0%        4.0
+                                5.0%       50         25      50.0%      16.8%        3.4
+                               10.0%      100         33      33.0%      22.1%        2.2
+                               20.0%      200         62      31.0%      41.6%        2.1
+                               30.0%      300         81      27.0%      54.4%        1.8
+                               40.0%      400         95      23.8%      63.8%        1.6
+                               50.0%      500        110      22.0%      73.8%        1.5
+                               60.0%      600        117      19.5%      78.5%        1.3
+                               70.0%      700        128      18.3%      85.9%        1.2
+                               80.0%      800        136      17.0%      91.3%        1.1
+                               90.0%      900        142      15.8%      95.3%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:44:48  确定最佳模型
+20220620-14:44:48  剔除无效模型 26 个：ratio_1_1 | pipeline1 | LGBMClassifier_DF - boosting_type='gbdt', colsample_bytree=0.9916168768550919, importance_type='split', is_unbalance=False, learning_rate=0.02269504678452342, max_depth=-1, min_child_samples=165, min_child_weight=0.001, min_split_gain=0.0, n_estimators=169, n_jobs=-1, num_leaves=22, reg_alpha=0.36607148130872236, reg_lambda=0.10119960284131346, silent=True, subsample=0.9304256141925331, subsample_for_bin=40000, subsample_freq=0                          [查准率非递减]
+                   ratio_1_1 | pipeline1 | LGBMClassifier_DF - boosting_type='dart', objective='binary', num_leaves=511, learning_rate=0.1, colsample_bytree=0.8, subsample=0.6, subsample_freq=20                                                                                                                                                                                                                                                                                                                  [查准率非递减]
+                   ratio_1_1 | pipeline1 | XGBClassifier_DF - 默认参数                                                                                                                                                                                                                                                                                                                                                                                                                                              [查准率非递减]
+                   ratio_1_1 | pipeline1 | RandomForestClassifier_DF - 默认参数                                                                                                                                                                                                                                                                                                                                                                                                                                     [查准率非递减]
+                   ratio_1_1 | pipeline1 | RandomForestClassifier_DF - n_estimators=500, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000                                                                                                                                                                                                                                                                                                                       [分数取值集中(唯一值), 分数区分度弱]
+                   ratio_1_1 | pipeline1 | RandomForestClassifier_DF - n_estimators=100, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000                                                                                                                                                                                                                                                                                                                                     [分数取值集中(唯一值)]
+                   ratio_1_1 | pipeline1 | LogisticRegression_DF - solver='liblinear'                                                                                                                                                                                                                                                                                                                                                                                                                               [查准率非递减]
+                   ratio_1_1 | pipeline2 | LGBMClassifier_DF - boosting_type='gbdt', colsample_bytree=0.9916168768550919, importance_type='split', is_unbalance=False, learning_rate=0.02269504678452342, max_depth=-1, min_child_samples=165, min_child_weight=0.001, min_split_gain=0.0, n_estimators=169, n_jobs=-1, num_leaves=22, reg_alpha=0.36607148130872236, reg_lambda=0.10119960284131346, silent=True, subsample=0.9304256141925331, subsample_for_bin=40000, subsample_freq=0                          [查准率非递减]
+                   ratio_1_1 | pipeline2 | XGBClassifier_DF - 默认参数                                                                                                                                                                                                                                                                                                                                                                                                                                              [查准率非递减]
+                   ratio_1_1 | pipeline2 | RandomForestClassifier_DF - 默认参数                                                                                                                                                                                                                                                                                                                                                                                                                       [查准率非递减, 分数取值集中]
+                   ratio_1_1 | pipeline2 | RandomForestClassifier_DF - n_estimators=500, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000                                                                                                                                                                                                                                                                                                                       [分数取值集中(唯一值), 分数区分度弱]
+                   ratio_1_1 | pipeline2 | RandomForestClassifier_DF - n_estimators=100, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000                                                                                                                                                                                                                                                                                                                                     [分数取值集中(唯一值)]
+                   ratio_1_1 | pipeline2 | LogisticRegression_DF - solver='liblinear'                                                                                                                                                                                                                                                                                                                                                                                                                               [查准率非递减]
+                   ratio_1_2 | pipeline1 | LGBMClassifier_DF - boosting_type='gbdt', colsample_bytree=0.9916168768550919, importance_type='split', is_unbalance=False, learning_rate=0.02269504678452342, max_depth=-1, min_child_samples=165, min_child_weight=0.001, min_split_gain=0.0, n_estimators=169, n_jobs=-1, num_leaves=22, reg_alpha=0.36607148130872236, reg_lambda=0.10119960284131346, silent=True, subsample=0.9304256141925331, subsample_for_bin=40000, subsample_freq=0                          [查准率非递减]
+                   ratio_1_2 | pipeline1 | LGBMClassifier_DF - boosting_type='dart', objective='binary', num_leaves=511, learning_rate=0.1, colsample_bytree=0.8, subsample=0.6, subsample_freq=20                                                                                                                                                                                                                                                                                                                  [查准率非递减]
+                   ratio_1_2 | pipeline1 | XGBClassifier_DF - 默认参数                                                                                                                                                                                                                                                                                                                                                                                                                                              [查准率非递减]
+                   ratio_1_2 | pipeline1 | RandomForestClassifier_DF - 默认参数                                                                                                                                                                                                                                                                                                                                                                                                                                     [分数取值集中]
+                   ratio_1_2 | pipeline1 | RandomForestClassifier_DF - n_estimators=500, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000                                                                                                                                                                                                                                                                                                                                     [分数取值集中(唯一值)]
+                   ratio_1_2 | pipeline1 | RandomForestClassifier_DF - n_estimators=100, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000                                                                                                                                                                                                                                                                                                                                     [分数取值集中(唯一值)]
+                   ratio_1_2 | pipeline1 | LogisticRegression_DF - solver='liblinear'                                                                                                                                                                                                                                                                                                                                                                                                                               [查准率非递减]
+                   ratio_1_2 | pipeline2 | LGBMClassifier_DF - boosting_type='dart', objective='binary', num_leaves=511, learning_rate=0.1, colsample_bytree=0.8, subsample=0.6, subsample_freq=20                                                                                                                                                                                                                                                                                                                  [分数区分度弱]
+                   ratio_1_2 | pipeline2 | XGBClassifier_DF - 默认参数                                                                                                                                                                                                                                                                                                                                                                                                                                              [查准率非递减]
+                   ratio_1_2 | pipeline2 | RandomForestClassifier_DF - 默认参数                                                                                                                                                                                                                                                                                                                                                                                                                                     [分数取值集中]
+                   ratio_1_2 | pipeline2 | RandomForestClassifier_DF - n_estimators=500, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000                                                                                                                                                                                                                                                                                                                                     [分数取值集中(唯一值)]
+                   ratio_1_2 | pipeline2 | RandomForestClassifier_DF - n_estimators=100, max_features=0.06, max_depth=10, min_samples_split=1000, min_samples_leaf=1000                                                                                                                                                                                                                                                                                                                                     [分数取值集中(唯一值)]
+                   ratio_1_2 | pipeline2 | LogisticRegression_DF - solver='liblinear'                                                                                                                                                                                                                                                                                                                                                                                                                               [查准率非递减]
+                   Name: if_weak, dtype: object
+20220620-14:44:48  最佳模型是：ratio_1_1 | pipeline2 | LGBMClassifier_DF - boosting_type='dart', objective='binary', num_leaves=511, learning_rate=0.1, colsample_bytree=0.8, subsample=0.6, subsample_freq=20
+
+20220620-14:44:48  data_train的测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       20         20     100.0%       2.0%        2.0
+                                5.0%      100        100     100.0%      10.0%        2.0
+                               10.0%      200        199      99.5%      19.9%        2.0
+                               20.0%      400        398      99.5%      39.8%        2.0
+                               30.0%      600        594      99.0%      59.4%        2.0
+                               40.0%      800        787      98.4%      78.7%        2.0
+                               50.0%     1000        950      95.0%      95.0%        1.9
+                               60.0%     1200        988      82.3%      98.8%        1.6
+                               70.0%     1400        996      71.1%      99.6%        1.4
+                               80.0%     1600        998      62.4%      99.8%        1.2
+                               90.0%     1800        998      55.4%      99.8%        1.1
+                              100.0%     2000       1000      50.0%     100.0%        1.0
+
+20220620-14:44:48  data_timein的测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%        5          4      80.0%       5.4%        5.4
+                                5.0%       25         12      48.0%      16.2%        3.2
+                               10.0%       50         21      42.0%      28.4%        2.8
+                               20.0%      100         37      37.0%      50.0%        2.5
+                               30.0%      150         43      28.7%      58.1%        1.9
+                               40.0%      200         47      23.5%      63.5%        1.6
+                               50.0%      250         53      21.2%      71.6%        1.4
+                               60.0%      300         59      19.7%      79.7%        1.3
+                               70.0%      350         61      17.4%      82.4%        1.2
+                               80.0%      400         65      16.2%      87.8%        1.1
+                               90.0%      450         68      15.1%      91.9%        1.0
+                              100.0%      500         74      14.8%     100.0%        1.0
+
+20220620-14:44:48  data_timeout的测试效果：
+                        累计人数占比 累计人数 累计人数_1 累计查准率 累计查全率 累计提升度
+                                1.0%       10          7      70.0%       4.7%        4.7
+                                5.0%       50         30      60.0%      20.1%        4.0
+                               10.0%      100         49      49.0%      32.9%        3.3
+                               20.0%      200         79      39.5%      53.0%        2.7
+                               30.0%      300        101      33.7%      67.8%        2.3
+                               40.0%      400        117      29.2%      78.5%        2.0
+                               50.0%      500        125      25.0%      83.9%        1.7
+                               60.0%      600        132      22.0%      88.6%        1.5
+                               70.0%      700        138      19.7%      92.6%        1.3
+                               80.0%      800        142      17.8%      95.3%        1.2
+                               90.0%      900        147      16.3%      98.7%        1.1
+                              100.0%     1000        149      14.9%     100.0%        1.0
+
+20220620-14:44:48  分数稳定度：0.02428
+
+20220620-14:44:48  特征重要性：
+                                                  field_name                                comment  importance
+                       0                        innet_months                               入网时长         205
+                       34   avg__monthsremain_last_stop_date      最后停机时间：剩余时长：近3月均值         151
+                       45   sep__monthsremain_last_stop_date  最后停机时间：剩余时长：近3月离散系数         137
+                       10                     gprs_flow_busy                         gprs-忙时-流量         130
+                       1                             age_add                   table_a_add测试字段1         125
+                       13                      days_call_p_4                         通话天数占比_4         117
+                       58               grow__gprs_flow_busy            gprs-忙时-流量：近3月成长率         113
+                       32                avg__gprs_flow_busy              gprs-忙时-流量：近3月均值         106
+                       33                          avg__arpu                    当月arpu：近3月均值          97
+                       105               std__gprs_flow_busy            gprs-忙时-流量：近3月标准差          96
+                       106                         std__arpu                  当月arpu：近3月标准差          83
+                       78                          max__arpu                  当月arpu：近3月最大值          81
+                       24                avg__call_dura_roam               省际漫游-时长：近3月均值          78
+                       59                         grow__arpu                  当月arpu：近3月成长率          73
+                       37                avg__gprs_flow_roam          gprs-国内漫游-流量：近3月均值          69
+                       89                min__gprs_flow_busy            gprs-忙时-流量：近3月最小值          69
+                       97                      std__call_use            语音资源使用量：近3月标准差          66
+                       46                 sep__gprs_now_rest        当月gprs资源余量：近3月离散系数          63
+                       43                   sep__calling_cnt            主叫通话次数：近3月离散系数          62
+                       4                       gprs_now_rest                       当月gprs资源余量          61
+
+20220620-14:44:48  保存训练结果至：./binaryclassify/eg/traintest~202010~202012/train_result~202010~202012.pkl
+
+20220620-14:44:48  最优模型的流水线不是pipeline1,若欲在预测时匹配topn原因需要使用pipeline1，从model_flows挑选一个基于pipeline1的保存至./binaryclassify/eg/traintest~202010~202012/train_model_flows~202010~202012.pkl: ratio_1_1 | pipeline1 | XGBClassifier_DF - 默认参数
+20220620-14:44:49  保存模型测试效果集合至：./binaryclassify/eg/traintest~202010~202012/train_pre_results~202010~202012.pkl
+20220620-14:44:49  结束时间：2022-06-20 14:44:49
+20220620-14:44:49  耗时：137 s
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     FeaturePrefilter_DF unique_limit(5000)小于X行数(2000), 添加unique_limit_actual：len(X)*0.99=1980
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead.  To get a de-fragmented frame, use `newframe = frame.copy()`
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline1 PsiTransformer timedata_timeout 计算稳定性(不区分正负例)，9个字段稳定性>=psi_limit（0.1）：
+grow__gprs_last_defer               3.214553
+sep__monthsremain_last_stop_date    0.497981
+grow__gprs_now_rest                 0.396414
+grow__calling_cnt                   0.372863
+wave__gprs_flow_video               0.276208
+grow__gprs_now_defer                0.274135
+sep__gprs_flow_commu                0.220594
+wave__gprs_flow_short               0.194640
+grow__call_use                      0.134494
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline1 PsiTransformer data_timeout 计算稳定性(区分正负例) ，9个字段稳定性>=psi_limit（0.1）：
+grow__gprs_last_defer               3.270721
+sep__monthsremain_last_stop_date    0.752976
+grow__calling_cnt                   0.490093
+wave__gprs_flow_video               0.486398
+grow__gprs_now_rest                 0.444149
+grow__gprs_now_defer                0.371084
+wave__gprs_flow_short               0.358536
+sep__gprs_flow_commu                0.302299
+grow__call_use                      0.213444
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline2 PsiTransformer timedata_timeout 计算稳定性(不区分正负例)，9个字段稳定性>=psi_limit（0.1）：
+grow__gprs_last_defer               3.214553
+sep__monthsremain_last_stop_date    0.497981
+grow__gprs_now_rest                 0.429863
+grow__calling_cnt                   0.372863
+wave__gprs_flow_video               0.276208
+grow__gprs_now_defer                0.274135
+sep__gprs_flow_commu                0.220594
+wave__gprs_flow_short               0.194640
+grow__call_use                      0.134494
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline2 PsiTransformer data_timeout 计算稳定性(区分正负例) ，9个字段稳定性>=psi_limit（0.1）：
+grow__gprs_last_defer               3.270721
+sep__monthsremain_last_stop_date    0.752976
+grow__calling_cnt                   0.490093
+wave__gprs_flow_video               0.486398
+grow__gprs_now_rest                 0.454311
+grow__gprs_now_defer                0.371084
+wave__gprs_flow_short               0.358536
+sep__gprs_flow_commu                0.302299
+grow__call_use                      0.213444
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     FeaturePrefilter_DF unique_limit(5000)小于X行数(3000), 添加unique_limit_actual：len(X)*0.99=2970
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline1 PsiTransformer timedata_timeout 计算稳定性(不区分正负例)，11个字段稳定性>=psi_limit（0.1）：
+grow__gprs_last_defer               0.962445
+sep__monthsremain_last_stop_date    0.497981
+grow__gprs_now_rest                 0.432695
+grow__calling_cnt                   0.372863
+sep__gprs_flow_video                0.296582
+grow__gprs_now_defer                0.274135
+sep__gprs_flow_commu                0.220594
+wave__gprs_flow_commu               0.147599
+wave__gprs_flow_music               0.147363
+wave__gprs_flow_short               0.115604
+wave__gprs_flow_video               0.113925
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline1 PsiTransformer data_timeout 计算稳定性(区分正负例) ，12个字段稳定性>=psi_limit（0.1）：
+grow__gprs_last_defer               1.038329
+sep__monthsremain_last_stop_date    0.752976
+wave__gprs_flow_music               0.501647
+grow__calling_cnt                   0.490093
+sep__gprs_flow_video                0.481734
+grow__gprs_now_rest                 0.446967
+wave__gprs_flow_commu               0.372743
+grow__gprs_now_defer                0.352131
+sep__gprs_flow_commu                0.302299
+wave__gprs_flow_video               0.251578
+wave__gprs_flow_short               0.227270
+sep__gprs_flow_music                0.227147
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline2 PsiTransformer timedata_timeout 计算稳定性(不区分正负例)，11个字段稳定性>=psi_limit（0.1）：
+grow__gprs_last_defer               0.962445
+sep__monthsremain_last_stop_date    0.497981
+grow__gprs_now_rest                 0.432695
+grow__calling_cnt                   0.372863
+sep__gprs_flow_video                0.296582
+grow__gprs_now_defer                0.274135
+sep__gprs_flow_commu                0.220594
+wave__gprs_flow_commu               0.147599
+wave__gprs_flow_music               0.147363
+wave__gprs_flow_short               0.115604
+wave__gprs_flow_video               0.113925
+dtype: float64
+  convert=self.convert_dtype,
+
+
+D:\Python for Windows\lib\site-packages\pandas\core\apply.py:1101: UserWarning:     pipeline2 PsiTransformer data_timeout 计算稳定性(区分正负例) ，12个字段稳定性>=psi_limit（0.1）：
+grow__gprs_last_defer               1.038329
+sep__monthsremain_last_stop_date    0.752976
+wave__gprs_flow_music               0.501647
+grow__calling_cnt                   0.490093
+sep__gprs_flow_video                0.481734
+grow__gprs_now_rest                 0.446967
+wave__gprs_flow_commu               0.372743
+grow__gprs_now_defer                0.352131
+sep__gprs_flow_commu                0.302299
+wave__gprs_flow_video               0.251578
+wave__gprs_flow_short               0.227270
+sep__gprs_flow_music                0.227147
+dtype: float64
+  convert=self.convert_dtype,

@@ -1,0 +1,98 @@
+
+                   ###################################################################### 转换、检查、纠正基础数据字典（Info.field_base） 
+
+20220305-10:16:59  field_base: 334行
+20220305-10:16:59  删除66个available“不可用”字段：['dev_channel_name_teamzk', 'age_teamzk', 'sex_teamzk', 'stop_times_teamadd', 'resent_stop_date_teammax', 'monthsaready_resent_stop_date_teammax', 'is_real_name_teamzk', 'track_eff_date_teamzk', 'monthsaready_track_eff_date_teamzk', 'track_exp_date_teamzk', 'monthsremain_track_exp_date_teamzk', 'pack_hd_num_teamadd', 'point_teamzk', 'basic_credit_teamzk', 'quota_teamzk', 'is_lh_teamzk', 'lh_type_teamzk', 'bxl_flow_step_teamzk', 'bxl_deal_times_teamzk', 'is_deal_bxl_teamzk', 'pack_bxl_num_teamzk', 'owe_times_teamadd', 'last_owe_month_teammax', 'monthsaready_last_owe_month_teammax', 'payment_fee_teamzk', 'balance_teamadd', 'sms_fee_teamadd', 'is_shaungka_teamzk', 'shaungka_type_teamzk', 'ct_calling_dur_teamadd', 'ct_cnt_teamadd', 'ct_calling_cnt_teamadd', 'wj_calling_dur_teamadd', 'wj_cnt_teamadd', 'wj_calling_cnt_teamadd', 'jwq_num_teamadd', 'jwq_ct_num_teamadd', 'jwq_wj_num_teamadd', 'jwq_calling_num_teamadd', 'jwq_ct_calling_num_teamadd', 'jwq_wj_calling_num_teamadd', 'jwq_called_num_teamadd', 'jwq_ct_called_num_teamadd', 'jwq_wj_called_num_teamadd', 'last_to_acct_flux_teamzk', 'acct_to_next_flux_teamadd', 'int_flux_teamadd', 'int_flux_days_teammax', 'normal_flux_teamadd', 'normal_flux_days_teammax', 'night_flux_teamadd', 'night_flux_days_teammax', 'self_scs_tsbz_cnt_teamadd', 'tyaddresscode_teamzk', 'tyaddressname_teamzk', 'market_time_teamzk', 'start_use_time_teamzk', 'end_use_time_teamzk', 'market_time_1_teamzk', 'start_use_time_1_teamzk', 'end_use_time_1_teamzk', 'rgst_tmn_time_2_teamzk', 'market_time_2_teamzk', 'start_use_time_2_teamzk', 'end_use_time_2_teamzk', 'pack_spcl_exp_date_teamzk']
+20220305-10:16:59  field_base: 268行
+
+20220305-10:16:59  删除7个基于“不可用”字段加工的手动衍生_py字段：
+                                                         field_name                                            formula
+                   80                                arpu_teamadd_p                     arpu_teamadd / balance_teamadd
+                   151                      int_flux_days_teammax_p                 int_flux_days_teammax / days_month
+                   156                   normal_flux_days_teammax_p              normal_flux_days_teammax / days_month
+                   159                    night_flux_days_teammax_p               night_flux_days_teammax / days_month
+                   176  add_prodspecfluw_packflowsum_lasttoacctflux  prod_spec_fluw_teamzk + pack_flow_sum_teamadd ...
+                   179                         data_flux_teamadd_p3  data_flux_teamadd / add_prodspecfluw_packflows...
+                   332              monthsremain_pack_spcl_exp_date           pack_spcl_exp_date_teamzk - current_date
+20220305-10:16:59  field_base: 261行
+
+
+D:\STUDY\Python\PycharmProjects\ModelProject\selfmodule\binarymodule\modelinfo.py:84: UserWarning: 确定下列日期类字段的into_model是否限制 ‘删除’：
+                 field_name              comment into_model
+280  rgst_tmn_time_1_teamzk  上一个终端_注册日期        NaN
+  warnings.warn(s)
+20220305-10:16:59  ################################################################################ 加定向流量包模型 ################################################################################
+20220305-10:17:00  日志文件：./binaryclassify/dxllb/traintest~202109~202110/log/dxllb_traintest~202109~202110~20220305101700.txt
+
+                                      ###################################################################### 转换、检查、纠正基础数据字典（Info.field_base） 
+
+20220305-10:17:00  20220305-10:17:00  field_base: 334行
+20220305-10:17:00  20220305-10:17:00  删除66个available“不可用”字段：['dev_channel_name_teamzk', 'age_teamzk', 'sex_teamzk', 'stop_times_teamadd', 'resent_stop_date_teammax', 'monthsaready_resent_stop_date_teammax', 'is_real_name_teamzk', 'track_eff_date_teamzk', 'monthsaready_track_eff_date_teamzk', 'track_exp_date_teamzk', 'monthsremain_track_exp_date_teamzk', 'pack_hd_num_teamadd', 'point_teamzk', 'basic_credit_teamzk', 'quota_teamzk', 'is_lh_teamzk', 'lh_type_teamzk', 'bxl_flow_step_teamzk', 'bxl_deal_times_teamzk', 'is_deal_bxl_teamzk', 'pack_bxl_num_teamzk', 'owe_times_teamadd', 'last_owe_month_teammax', 'monthsaready_last_owe_month_teammax', 'payment_fee_teamzk', 'balance_teamadd', 'sms_fee_teamadd', 'is_shaungka_teamzk', 'shaungka_type_teamzk', 'ct_calling_dur_teamadd', 'ct_cnt_teamadd', 'ct_calling_cnt_teamadd', 'wj_calling_dur_teamadd', 'wj_cnt_teamadd', 'wj_calling_cnt_teamadd', 'jwq_num_teamadd', 'jwq_ct_num_teamadd', 'jwq_wj_num_teamadd', 'jwq_calling_num_teamadd', 'jwq_ct_calling_num_teamadd', 'jwq_wj_calling_num_teamadd', 'jwq_called_num_teamadd', 'jwq_ct_called_num_teamadd', 'jwq_wj_called_num_teamadd', 'last_to_acct_flux_teamzk', 'acct_to_next_flux_teamadd', 'int_flux_teamadd', 'int_flux_days_teammax', 'normal_flux_teamadd', 'normal_flux_days_teammax', 'night_flux_teamadd', 'night_flux_days_teammax', 'self_scs_tsbz_cnt_teamadd', 'tyaddresscode_teamzk', 'tyaddressname_teamzk', 'market_time_teamzk', 'start_use_time_teamzk', 'end_use_time_teamzk', 'market_time_1_teamzk', 'start_use_time_1_teamzk', 'end_use_time_1_teamzk', 'rgst_tmn_time_2_teamzk', 'market_time_2_teamzk', 'start_use_time_2_teamzk', 'end_use_time_2_teamzk', 'pack_spcl_exp_date_teamzk']
+20220305-10:17:00  20220305-10:17:00  field_base: 268行
+
+20220305-10:17:00  20220305-10:17:00  删除7个基于“不可用”字段加工的手动衍生_py字段：
+                                                                            field_name                                            formula
+                                      80                                arpu_teamadd_p                     arpu_teamadd / balance_teamadd
+                                      151                      int_flux_days_teammax_p                 int_flux_days_teammax / days_month
+                                      156                   normal_flux_days_teammax_p              normal_flux_days_teammax / days_month
+                                      159                    night_flux_days_teammax_p               night_flux_days_teammax / days_month
+                                      176  add_prodspecfluw_packflowsum_lasttoacctflux  prod_spec_fluw_teamzk + pack_flow_sum_teamadd ...
+                                      179                         data_flux_teamadd_p3  data_flux_teamadd / add_prodspecfluw_packflows...
+                                      332              monthsremain_pack_spcl_exp_date           pack_spcl_exp_date_teamzk - current_date
+20220305-10:17:00  20220305-10:17:00  field_base: 261行
+
+
+
+
+D:\STUDY\Python\PycharmProjects\ModelProject\selfmodule\binarymodule\modelinfo.py:84: UserWarning: 确定下列日期类字段的into_model是否限制 ‘删除’：
+                 field_name              comment into_model
+280  rgst_tmn_time_1_teamzk  上一个终端_注册日期        NaN
+  warnings.warn(s)
+20220305-10:17:00  20220305-10:17:00  ################################################################################ 5G加包模型 ################################################################################
+20220305-10:17:00  20220305-10:17:00  日志文件：./binaryclassify/llb5g/traintest~202110~202111/log/llb5g_traintest~202110~202111~20220305101700.txt
+
+                                                         ###################################################################### 转换、检查、纠正基础数据字典（Info.field_base） 
+
+20220305-10:17:00  20220305-10:17:00  20220305-10:17:00  field_base: 334行
+20220305-10:17:00  20220305-10:17:00  20220305-10:17:00  删除66个available“不可用”字段：['dev_channel_name_teamzk', 'age_teamzk', 'sex_teamzk', 'stop_times_teamadd', 'resent_stop_date_teammax', 'monthsaready_resent_stop_date_teammax', 'is_real_name_teamzk', 'track_eff_date_teamzk', 'monthsaready_track_eff_date_teamzk', 'track_exp_date_teamzk', 'monthsremain_track_exp_date_teamzk', 'pack_hd_num_teamadd', 'point_teamzk', 'basic_credit_teamzk', 'quota_teamzk', 'is_lh_teamzk', 'lh_type_teamzk', 'bxl_flow_step_teamzk', 'bxl_deal_times_teamzk', 'is_deal_bxl_teamzk', 'pack_bxl_num_teamzk', 'owe_times_teamadd', 'last_owe_month_teammax', 'monthsaready_last_owe_month_teammax', 'payment_fee_teamzk', 'balance_teamadd', 'sms_fee_teamadd', 'is_shaungka_teamzk', 'shaungka_type_teamzk', 'ct_calling_dur_teamadd', 'ct_cnt_teamadd', 'ct_calling_cnt_teamadd', 'wj_calling_dur_teamadd', 'wj_cnt_teamadd', 'wj_calling_cnt_teamadd', 'jwq_num_teamadd', 'jwq_ct_num_teamadd', 'jwq_wj_num_teamadd', 'jwq_calling_num_teamadd', 'jwq_ct_calling_num_teamadd', 'jwq_wj_calling_num_teamadd', 'jwq_called_num_teamadd', 'jwq_ct_called_num_teamadd', 'jwq_wj_called_num_teamadd', 'last_to_acct_flux_teamzk', 'acct_to_next_flux_teamadd', 'int_flux_teamadd', 'int_flux_days_teammax', 'normal_flux_teamadd', 'normal_flux_days_teammax', 'night_flux_teamadd', 'night_flux_days_teammax', 'self_scs_tsbz_cnt_teamadd', 'tyaddresscode_teamzk', 'tyaddressname_teamzk', 'market_time_teamzk', 'start_use_time_teamzk', 'end_use_time_teamzk', 'market_time_1_teamzk', 'start_use_time_1_teamzk', 'end_use_time_1_teamzk', 'rgst_tmn_time_2_teamzk', 'market_time_2_teamzk', 'start_use_time_2_teamzk', 'end_use_time_2_teamzk', 'pack_spcl_exp_date_teamzk']
+20220305-10:17:00  20220305-10:17:00  20220305-10:17:00  field_base: 268行
+
+20220305-10:17:01  20220305-10:17:01  20220305-10:17:01  删除7个基于“不可用”字段加工的手动衍生_py字段：
+                                                                                               field_name                                            formula
+                                                         80                                arpu_teamadd_p                     arpu_teamadd / balance_teamadd
+                                                         151                      int_flux_days_teammax_p                 int_flux_days_teammax / days_month
+                                                         156                   normal_flux_days_teammax_p              normal_flux_days_teammax / days_month
+                                                         159                    night_flux_days_teammax_p               night_flux_days_teammax / days_month
+                                                         176  add_prodspecfluw_packflowsum_lasttoacctflux  prod_spec_fluw_teamzk + pack_flow_sum_teamadd ...
+                                                         179                         data_flux_teamadd_p3  data_flux_teamadd / add_prodspecfluw_packflows...
+                                                         332              monthsremain_pack_spcl_exp_date           pack_spcl_exp_date_teamzk - current_date
+20220305-10:17:01  20220305-10:17:01  20220305-10:17:01  field_base: 261行
+
+
+
+
+
+
+D:\STUDY\Python\PycharmProjects\ModelProject\selfmodule\binarymodule\modelinfo.py:84: UserWarning: 确定下列日期类字段的into_model是否限制 ‘删除’：
+                 field_name              comment into_model
+280  rgst_tmn_time_1_teamzk  上一个终端_注册日期        NaN
+  warnings.warn(s)
+20220305-10:17:01  20220305-10:17:01  20220305-10:17:01  ################################################################################ 视频彩铃潜客模型 ################################################################################
+20220305-10:17:01  20220305-10:17:01  20220305-10:17:01  日志文件：./binaryclassify/clyw/traintest~202110~202111/log/clyw_traintest~202110~202111~20220305101701.txt
+
+                                                                            ###################################################################### 转换、检查、纠正基础数据字典（Info.field_base） 
+
+20220305-10:17:01  20220305-10:17:01  20220305-10:17:01  20220305-10:17:01  field_base: 334行
+20220305-10:17:01  20220305-10:17:01  20220305-10:17:01  20220305-10:17:01  删除66个available“不可用”字段：['dev_channel_name_teamzk', 'age_teamzk', 'sex_teamzk', 'stop_times_teamadd', 'resent_stop_date_teammax', 'monthsaready_resent_stop_date_teammax', 'is_real_name_teamzk', 'track_eff_date_teamzk', 'monthsaready_track_eff_date_teamzk', 'track_exp_date_teamzk', 'monthsremain_track_exp_date_teamzk', 'pack_hd_num_teamadd', 'point_teamzk', 'basic_credit_teamzk', 'quota_teamzk', 'is_lh_teamzk', 'lh_type_teamzk', 'bxl_flow_step_teamzk', 'bxl_deal_times_teamzk', 'is_deal_bxl_teamzk', 'pack_bxl_num_teamzk', 'owe_times_teamadd', 'last_owe_month_teammax', 'monthsaready_last_owe_month_teammax', 'payment_fee_teamzk', 'balance_teamadd', 'sms_fee_teamadd', 'is_shaungka_teamzk', 'shaungka_type_teamzk', 'ct_calling_dur_teamadd', 'ct_cnt_teamadd', 'ct_calling_cnt_teamadd', 'wj_calling_dur_teamadd', 'wj_cnt_teamadd', 'wj_calling_cnt_teamadd', 'jwq_num_teamadd', 'jwq_ct_num_teamadd', 'jwq_wj_num_teamadd', 'jwq_calling_num_teamadd', 'jwq_ct_calling_num_teamadd', 'jwq_wj_calling_num_teamadd', 'jwq_called_num_teamadd', 'jwq_ct_called_num_teamadd', 'jwq_wj_called_num_teamadd', 'last_to_acct_flux_teamzk', 'acct_to_next_flux_teamadd', 'int_flux_teamadd', 'int_flux_days_teammax', 'normal_flux_teamadd', 'normal_flux_days_teammax', 'night_flux_teamadd', 'night_flux_days_teammax', 'self_scs_tsbz_cnt_teamadd', 'tyaddresscode_teamzk', 'tyaddressname_teamzk', 'market_time_teamzk', 'start_use_time_teamzk', 'end_use_time_teamzk', 'market_time_1_teamzk', 'start_use_time_1_teamzk', 'end_use_time_1_teamzk', 'rgst_tmn_time_2_teamzk', 'market_time_2_teamzk', 'start_use_time_2_teamzk', 'end_use_time_2_teamzk', 'pack_spcl_exp_date_teamzk']
+20220305-10:17:01  20220305-10:17:01  20220305-10:17:01  20220305-10:17:01  field_base: 268行
+
+20220305-10:17:01  20220305-10:17:01  20220305-10:17:01  20220305-10:17:01  删除7个基于“不可用”字段加工的手动衍生_py字段：
+                                                                                                                  field_name                                            formula
+                                                                            80                                arpu_teamadd_p                     arpu_teamadd / balance_teamadd
+                                                                            151                      int_flux_days_teammax_p                 int_flux_days_teammax / days_month
+                                                                            156                   normal_flux_days_teammax_p              normal_flux_days_teammax / days_month
+                                                                            159                    night_flux_days_teammax_p               night_flux_days_teammax / days_month
+                                                                            176  add_prodspecfluw_packflowsum_lasttoacctflux  prod_spec_fluw_teamzk + pack_flow_sum_teamadd ...
+                                                                            179                         data_flux_teamadd_p3  data_flux_teamadd / add_prodspecfluw_packflows...
+                                                                            332              monthsremain_pack_spcl_exp_date           pack_spcl_exp_date_teamzk - current_date
+20220305-10:17:01  20220305-10:17:01  20220305-10:17:01  20220305-10:17:01  field_base: 261行
